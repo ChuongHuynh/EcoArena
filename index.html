@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e"><meta name="description" content="Kinh tế vi mô BEE1037 thành trò chơi: đi trên con đường kinh doanh.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<script>window.ARENA_RELEASE=true;</script>
+<style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head><body>
+<title>Economics Arena</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: phone-width column. Map view = sticky HUD + tall road SVG + sticky landmark bar. Play view = full-screen sheet with its own header and action bar. */
+:root{
+  --bg:#eef2f1; --card:#ffffff; --ink:#14292b; --muted:#566c6e; --line:#d3dedc;
+  --teal:#0f766e; --teal-soft:#d5efeb; --gold:#e8a317; --gold-soft:#fbefcf;
+  --good:#1f8a4c; --good-soft:#d9f2e3; --bad:#c2410c; --bad-soft:#fde4d6;
+  --coffee:#7a4a2a; --coffee-soft:#f1e4d8;
+  --road:#4a5658; --road-edge:#2f3a3c; --lane:#f4f1e4; --ground-a:#e2ebe4; --ground-b:#d8e5dc; --bldg:#c3d3cf; --bldg-2:#adc2bd;
+  --font:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1b1c; --card:#152a2c; --ink:#e6f1ef; --muted:#9bb3b1; --line:#27403f;
+  --teal:#3cc4b4; --teal-soft:#16413f; --gold:#f2b83a; --gold-soft:#463816;
+  --good:#52c985; --good-soft:#173d28; --bad:#f08a55; --bad-soft:#44241a; --coffee:#d9a77e; --coffee-soft:#3a2a1f;
+  --road:#2b3638; --road-edge:#1b2425; --lane:#c9c4ae; --ground-a:#12282a; --ground-b:#163033; --bldg:#24403f; --bldg-2:#2c4d4b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1b1c; --card:#152a2c; --ink:#e6f1ef; --muted:#9bb3b1; --line:#27403f;
+  --teal:#3cc4b4; --teal-soft:#16413f; --gold:#f2b83a; --gold-soft:#463816;
+  --good:#52c985; --good-soft:#173d28; --bad:#f08a55; --bad-soft:#44241a; --coffee:#d9a77e; --coffee-soft:#3a2a1f;
+  --road:#2b3638; --road-edge:#1b2425; --lane:#c9c4ae; --ground-a:#12282a; --ground-b:#163033; --bldg:#24403f; --bldg-2:#2c4d4b; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;
+  padding-block:0 170px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body.locked{overflow:hidden}
+.wrap{max-width:560px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;border-bottom:1.5px solid var(--line)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{font-weight:800;font-size:17px;letter-spacing:-.01em}
+.brand small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
+.lang{display:flex;border:1.5px solid var(--line);border-radius:99px;overflow:hidden;background:var(--card);flex:0 0 auto}
+.lang button{border:0;background:none;color:var(--muted);font:700 13px var(--font);padding:6px 11px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--teal);color:#fff}
+.hud{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pill{border:1.5px solid var(--line);background:var(--card);border-radius:99px;padding:3px 11px;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill.xp{border-color:var(--gold);background:var(--gold-soft)} .pill.cap{border-color:var(--good);background:var(--good-soft)} .pill.rank{border-color:var(--teal);background:var(--teal-soft)}
+.pill.lives{border-color:var(--bad);background:var(--bad-soft)}
+.map{margin-top:10px;border-radius:18px;overflow:hidden;border:1.5px solid var(--line);background:var(--ground-b)}
+svg#road{display:block;width:100%;height:auto}
+svg text{font-family:var(--font)}
+.node,.npc{cursor:pointer}
+@media (prefers-reduced-motion:no-preference){.npc .bob{animation:bob 1.6s ease-in-out infinite}.cur-ring{animation:pulse 1.4s ease-in-out infinite}}
+@keyframes bob{50%{transform:translateY(-4px)}} @keyframes pulse{50%{opacity:.35}}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--bg);border-top:1.5px solid var(--line);
+  padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal)}
+.bar h2{font-size:18px;margin:2px 0 8px;line-height:1.3;text-wrap:balance}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;min-width:0;font:700 15px var(--font);border-radius:12px;border:2px solid var(--teal);background:var(--teal);color:#fff;padding:11px 14px;cursor:pointer;text-align:center}
+.btn.ghost{background:none;color:var(--teal);flex:0 0 auto}
+.acts .btn{min-width:max-content}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.muted{color:var(--muted)} .small{font-size:13px}
+/* play view */
+.play{position:fixed;inset:0;z-index:8;background:var(--bg);overflow-y:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+.play header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:12px}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+.stack{display:grid;gap:12px}
+h1{font-size:24px;line-height:1.2;margin:4px 0 8px;letter-spacing:-.02em;text-wrap:balance}
+h3.q{font-size:18px;line-height:1.4;margin:0 0 14px;text-wrap:pretty}
+p{margin:0 0 10px}
+.tag{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:2px 9px;background:var(--teal-soft);color:var(--teal);margin-bottom:10px}
+.tag.vi{background:var(--gold-soft);color:var(--ink);margin-left:6px}
+.dots{display:flex;gap:6px;margin:0 0 12px} .dots i{flex:1;height:7px;border-radius:4px;background:var(--line)}
+.dots i.done{background:var(--teal)} .dots i.cur{background:var(--gold)}
+.opt{display:block;width:100%;text-align:left;font:600 15px/1.45 var(--font);color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;cursor:pointer}
+.opt:hover{border-color:var(--teal)} .opt.sel{border-color:var(--teal);background:var(--teal-soft)}
+.opt.ok{border-color:var(--good);background:var(--good-soft)} .opt.no{border-color:var(--bad);background:var(--bad-soft)}
+.opt.gone{opacity:.3;text-decoration:line-through;pointer-events:none}
+.tfrow{border-top:1px solid var(--line);padding:12px 0;display:grid;gap:8px} .tfrow:first-of-type{border-top:0;padding-top:0}
+.tfbtns{display:flex;gap:8px} .tfbtns .opt{margin:0;text-align:center;padding:8px}
+.pairs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pairs .opt{margin:0;font-size:14px;padding:10px}
+.pairs .opt.paired{border-style:dashed}
+.fb{border-radius:12px;padding:12px 14px;margin-top:12px;font-size:15px}
+.fb.good{background:var(--good-soft);border:1.5px solid var(--good)} .fb.bad{background:var(--bad-soft);border:1.5px solid var(--bad)} .fb.hint{background:var(--gold-soft);border:1.5px solid var(--gold)}
+.fb b{display:block;margin-bottom:2px}
+.stars{display:flex;justify-content:center;gap:8px;margin:6px 0 10px} .stars svg{width:48px;height:48px}
+.stars .on{fill:var(--gold);stroke:var(--gold)} .stars .off{fill:none;stroke:var(--line)}
+.center{text-align:center}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.kpi{border:1.5px solid var(--line);border-radius:12px;padding:8px;text-align:center;min-width:0} .kpi span{display:block;font-size:12px;color:var(--muted)} .kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.rows{display:grid;gap:6px;margin-top:10px} .rowline{display:flex;justify-content:space-between;gap:10px;font-size:14px;border-top:1px solid var(--line);padding-top:6px}
+.scene{background:var(--coffee-soft);border:1.5px solid var(--coffee);border-radius:14px;padding:14px;margin-bottom:12px}
+.picker{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:8px 0 4px}
+.step{width:48px;height:48px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);font:800 22px var(--font);cursor:pointer}
+.big{text-align:center;font-size:36px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}
+.big small{font-size:15px;font-weight:600;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--teal)}
+.tbl-wrap{overflow-x:auto} table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+th,td{padding:6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap} th{font-size:12px;color:var(--muted);text-transform:uppercase} th:first-child,td:first-child{text-align:left}
+tr.best td{font-weight:800;color:var(--good)}
+svg.chart{width:100%;height:auto;display:block} svg.chart text{fill:var(--muted);font:600 11px var(--font)} svg.chart text.strong{fill:var(--ink);font-weight:800}
+.timer{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:-4px 0 12px} .timer i{display:block;height:100%;background:var(--gold);transition:width 1s linear}
+/* sheets */
+.overlay{position:fixed;inset:0;z-index:10;background:color-mix(in srgb,var(--ink) 45%,transparent);display:flex;align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:18px;width:100%;max-width:528px;max-height:85vh;overflow:auto}
+.who{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.who .face{font-size:32px;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:var(--gold-soft);border:2px solid var(--gold);flex:0 0 auto}
+.who b{display:block}
+.frame{position:fixed;inset:0;z-index:9;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.frame .fbar{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px max(16px,env(safe-area-inset-left,0px));border-bottom:1.5px solid var(--line)}
+.frame iframe{flex:1;border:0;width:100%;background:var(--bg)}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 110px);transform:translateX(-50%);z-index:12;background:var(--ink);color:var(--bg);font-weight:700;border-radius:12px;padding:10px 16px;max-width:calc(100% - 32px);text-align:center;font-size:15px}
+.loading{padding:40px 0;text-align:center}
+.login{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
+.lg-card{background:var(--card);border:1.5px solid var(--line);border-radius:18px;padding:22px;width:100%;max-width:400px;display:grid;gap:8px}
+.lg-card label{font-size:13px;font-weight:700;color:var(--muted);margin-top:6px}
+.lg-card input{font:600 17px var(--font);color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:11px 12px;width:100%}
+.lg-card input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.lg-card .btn{margin-top:8px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="row">
+      <div class="brand">Economics Arena<small id="crumb"></small></div>
+      <div class="lang" role="group" aria-label="Language / Ngôn ngữ"><button data-lang="vi" aria-pressed="true">VI</button><button data-lang="en" aria-pressed="false">EN</button></div>
+    </div>
+    <div class="hud"><span class="pill rank" id="rank"></span><span class="pill xp" id="xp"></span><span class="pill cap" id="cap"></span><span class="pill" id="road-pill"></span><span class="pill" id="cloud-pill"></span></div>
+  </header>
+  <div class="map"><svg id="road" xmlns="http://www.w3.org/2000/svg" role="img"><text x="50%" y="40" text-anchor="middle">…</text></svg></div>
+</div>
+<div class="bar"><div class="wrap" id="panel"><p class="loading muted">Đang tải ngân hàng câu hỏi… / Loading the question bank…</p></div></div>
+<section class="play" id="play" hidden><div class="wrap"><header><div class="brand" id="play-title" style="min-width:0"></div><div class="row" style="flex:0 0 auto"><div class="hud" style="margin:0" id="play-hud"></div><div class="lang" role="group" aria-label="Language / Ngôn ngữ"><button data-lang="vi" aria-pressed="true">VI</button><button data-lang="en" aria-pressed="false">EN</button></div></div></header><main id="play-body"></main></div>
+  <div class="bar"><div class="wrap acts" id="play-bar"></div></div></section>
+<div class="frame" id="frame" hidden><div class="fbar"><b id="frame-title"></b><button class="btn ghost" data-act="closeframe" id="frame-close"></button></div><iframe id="frame-if" title="Mini game"></iframe></div>
+<div class="overlay" id="ov" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="login" id="login" hidden><form class="lg-card" id="lg-form" autocomplete="on">
+  <div class="eyebrow">Economics Arena · BEE1037</div><h1 id="lg-title">Đăng nhập vào lớp</h1><p class="muted" id="lg-sub"></p>
+  <label for="lg-name" id="lg-name-l">Họ và tên</label><input id="lg-name" name="username" autocomplete="username" required>
+  <label for="lg-code" id="lg-code-l">Mã đăng nhập</label><input id="lg-code" name="password" type="password" autocomplete="current-password" required>
+  <p class="fb bad" id="lg-err" hidden></p><button class="btn" id="lg-go" type="submit">Vào lớp</button></form></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js" charset="utf-8"></script>
+<script>
+(function(){
+var B=window.ARENA_BANK;
+var lang='vi';try{var l=localStorage.getItem('arena-lang');if(l==='en'||l==='vi')lang=l;}catch(e){}
+function V(vi,en){return {vi:vi,en:en};}
+function tx(o){return typeof o==='string'?o:o[lang];}
+function el(id){return document.getElementById(id);}
+function L(vi,en){return lang==='vi'?vi:en;}
+function fmt(n){return Math.round(n).toLocaleString(lang==='vi'?'vi-VN':'en-US');}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),x=a[i];a[i]=a[j];a[j]=x;}return a;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// the web release has no bank.js: questions come from the server (see QUESTION SOURCE)
+
+/* ================= WORLDS: UEL BEE1037 chapters ================= */
+var WORLDS=[
+ {t:V('Kinh tế học và vấn đề cơ bản','Economics and the basic problem'),road:V('Hẻm nhỏ','Small alley'),rank:V('Xe đẩy cà phê','Coffee cart'),lanes:1},
+ {t:V('Cung cầu và chính sách','Supply, demand and policy'),road:V('Phố chợ','Market street'),rank:V('Quán cà phê','Cafe'),lanes:2},
+ {t:V('Lựa chọn của người tiêu dùng','Consumer choice'),road:V('Đường phố','City street'),rank:V('Chuỗi ba quán','Three-shop chain'),lanes:2},
+ {t:V('Chi phí sản xuất','Costs of production'),road:V('Đại lộ','Boulevard'),rank:V('Xưởng rang','Roastery'),lanes:3},
+ {t:V('Cạnh tranh hoàn hảo','Perfect competition'),road:V('Quốc lộ','Highway'),rank:V('Công ty','Company'),lanes:4},
+ {t:V('Độc quyền','Monopoly'),road:V('Cao tốc','Expressway'),rank:V('Thương hiệu dẫn đầu','Market leader'),lanes:4},
+ {t:V('Cạnh tranh độc quyền và độc quyền nhóm','Monopolistic competition and oligopoly'),road:V('Cầu lớn','Grand bridge'),rank:V('Tập đoàn','Group'),lanes:5}
+];
+var STAGE_VI={"1.1":"Khan hiếm và đối tượng của kinh tế học","1.2":"Chi phí cơ hội và tư duy cận biên","1.3":"Các nguyên lý của kinh tế học","1.4":"PPF và lợi thế so sánh","2.1":"Cung, cầu và các yếu tố dịch chuyển","2.2":"Cân bằng thị trường","2.3":"Độ co giãn","2.4":"Thặng dư, kiểm soát giá và thuế","3.1":"Đường ngân sách","3.2":"Đường bàng quan và MRS","3.3":"Lựa chọn tối ưu","3.4":"Thay đổi giá, thu nhập; hiệu ứng thay thế và thu nhập","4.1":"Doanh thu, chi phí và lợi nhuận","4.2":"Hàm sản xuất","4.3":"Các loại chi phí","4.4":"Đường chi phí và dài hạn","5.1":"Đặc điểm và doanh thu","5.2":"Tối đa hóa lợi nhuận","5.3":"Đóng cửa và rời ngành","5.4":"Cung ngắn hạn và dài hạn","6.1":"Nguồn gốc độc quyền","6.2":"Đường cầu và doanh thu biên","6.3":"Lợi nhuận và tổn thất phúc lợi","6.4":"Phân biệt giá và chính sách","7.1":"Cạnh tranh độc quyền","7.2":"Độc quyền nhóm","7.3":"Lý thuyết trò chơi","7.4":"Ôn tập cấu trúc thị trường"};
+var STAGE_EN={"1.1":"Scarcity and what economics studies","1.2":"Opportunity cost and marginal thinking","1.3":"Principles of economics","1.4":"The PPF and comparative advantage",
+ "2.1":"Supply, demand and what shifts them","2.2":"Market equilibrium","2.3":"Elasticity","2.4":"Surplus, price controls and taxes",
+ "3.1":"The budget line","3.2":"Indifference curves and the MRS","3.3":"The optimal choice","3.4":"Price and income changes; substitution and income effects",
+ "4.1":"Revenue, cost and profit","4.2":"The production function","4.3":"Measures of cost","4.4":"Cost curves and the long run",
+ "5.1":"Features and revenue","5.2":"Profit maximisation","5.3":"Shutdown and exit","5.4":"Short-run and long-run supply",
+ "6.1":"Why monopolies arise","6.2":"Demand and marginal revenue","6.3":"Profit and welfare loss","6.4":"Price discrimination and policy",
+ "7.1":"Monopolistic competition","7.2":"Oligopoly","7.3":"Game theory","7.4":"Market structures review"};
+
+/* ================= MISSIONS (role play, DESIGN_v1) ================= */
+function sumMB(x){var s=0;for(var i=1;i<=x;i++)s+=80-10*(i-1);return s;}
+var MISSIONS={
+ '1.5':{kind:'decide',name:V('Nhiệm vụ: chia 10 giờ bán hàng','Mission: split your 10 selling hours'),
+  story:V('Xe đẩy của bạn mở 10 giờ một ngày. Mỗi giờ bán cà phê lãi đều 50k. Bạn cũng có thể dành giờ để nướng bánh mì: giờ đầu lãi 80k, mỗi giờ sau lãi ít hơn 10k vì khách mua bánh mì có hạn. Chia giờ thế nào để lãi nhiều nhất?',
+          'Your cart is open 10 hours a day. Each hour selling coffee earns a steady 50k. You can also spend hours baking bánh mì: the first hour earns 80k and each extra hour earns 10k less, because bánh mì buyers are limited. How should you split the day?'),
+  label:V('Số giờ làm bánh mì','Hours baking bánh mì'),unit:V('giờ','h'),min:0,max:10,start:7,
+  f:function(x){return sumMB(x)+50*(10-x);},
+  rows:function(x){return [[L('Lãi bánh mì','Bánh mì profit'),fmt(sumMB(x))+'k'],[L('Lãi cà phê','Coffee profit'),fmt(50*(10-x))+'k'],[L('Lãi giờ bánh mì cuối','Last bánh mì hour'),x?fmt(80-10*(x-1))+'k':'—']];},
+  vlabel:V('Tổng lãi','Total profit'),vunit:'k',
+  why:V('Giờ bán cà phê bị bỏ qua (50k) là chi phí cơ hội của mỗi giờ làm bánh mì. Làm thêm bánh mì chừng nào lãi biên của giờ đó còn ít nhất 50k: giờ thứ 4 mang về đúng 50k, giờ thứ 5 chỉ 40k. Vì vậy 3 hoặc 4 giờ bánh mì cho lãi cao nhất, 560k.',
+        'Each baking hour costs you a 50k coffee hour: that is its opportunity cost. Keep baking while the marginal hour still earns at least 50k. The 4th hour earns exactly 50k and the 5th only 40k, so 3 or 4 baking hours give the most, 560k.')},
+ '2.5':{kind:'cafe',name:V('Mini game: Chủ quán cà phê','Mini game: Cafe Owner')},
+ '3.5':{kind:'decide',name:V('Nhiệm vụ người mua: 200k cho cà phê và bánh mì','Buyer mission: 200k for coffee and bánh mì'),
+  story:V('Bạn có 200k cho cả tuần. Cà phê 25k/ly, bánh mì 20k/ổ. Mức thỏa mãn của bạn là U = (số ly cà phê) × (số ổ bánh mì). Mua bao nhiêu ly cà phê thì U lớn nhất? Tiền còn lại sẽ mua hết bánh mì.',
+          'You have 200k for the week. Coffee is 25k a cup and bánh mì 20k each. Your satisfaction is U = (cups of coffee) × (bánh mì). How many coffees maximise U? The rest of the money goes on bánh mì.'),
+  label:V('Số ly cà phê','Cups of coffee'),unit:V('ly','cups'),min:0,max:8,start:7,
+  f:function(x){return x*Math.floor((200-25*x)/20);},
+  rows:function(x){var b=Math.floor((200-25*x)/20);return [[L('Bánh mì mua được','Bánh mì you can buy'),b],[L('Tiền tiêu','Money spent'),fmt(25*x+20*b)+'k'],[L('Tiền thừa','Left over'),fmt(200-25*x-20*b)+'k']];},
+  vlabel:V('Mức thỏa mãn U','Satisfaction U'),vunit:'',
+  why:V('Tối ưu khi MU/P bằng nhau giữa hai món. Với U = C × B: MU của cà phê là B, của bánh mì là C. Tại 4 ly và 5 ổ: 5/25 = 4/20 = 0,2, và chi đúng một nửa ngân sách cho mỗi món. U = 20 là cao nhất.',
+        'The best bundle equalises MU/P. With U = C × B, coffee\'s MU is B and bánh mì\'s is C. At 4 coffees and 5 bánh mì: 5/25 = 4/20 = 0.2, and half the budget goes on each. U = 20 is the maximum.')},
+ '4.5':{kind:'decide',lower:true,name:V('Nhiệm vụ: chọn quy mô xưởng rang','Mission: size the roastery'),
+  story:V('Xưởng rang có chi phí TC = Q² + 6Q + 64 (triệu đồng, Q là tấn/tháng). Đối tác chỉ ký hợp đồng nếu chi phí trung bình mỗi tấn thấp. Chọn sản lượng cho ATC thấp nhất.',
+          'The roastery costs TC = Q² + 6Q + 64 (million VND, Q in tons a month). The buyer signs only if the cost per ton is low. Pick the output with the lowest ATC.'),
+  label:V('Sản lượng Q','Output Q'),unit:V('tấn','tons'),min:1,max:20,start:3,
+  f:function(q){return Math.round((q+6+64/q)*100)/100;},
+  rows:function(q){return [[L('Tổng chi phí','Total cost'),fmt(q*q+6*q+64)],[L('Chi phí biên MC','Marginal cost MC'),2*q+6],[L('Chi phí cố định trung bình','Average fixed cost'),(64/q).toFixed(1)]];},
+  vlabel:V('ATC (triệu/tấn)','ATC (million/ton)'),vunit:'',
+  why:V('ATC = Q + 6 + 64/Q. Khi MC < ATC thì ATC còn giảm, khi MC > ATC thì ATC tăng. Tại Q = 8: MC = 2×8 + 6 = 22 = ATC, đó là điểm thấp nhất của ATC.',
+        'ATC = Q + 6 + 64/Q. While MC < ATC, ATC falls; once MC > ATC, it rises. At Q = 8, MC = 2×8 + 6 = 22 = ATC, the bottom of the ATC curve.')},
+ '5.5':{kind:'decide',name:V('Nhiệm vụ người bán: chợ đầu mối','Seller mission: the wholesale market'),
+  story:V('Ở chợ đầu mối, cà phê rang bán theo giá thị trường 40 (nghìn đồng/kg). Bạn là người chấp nhận giá. Chi phí của bạn TC = q² + 10q + 100. Bán bao nhiêu kg để lãi nhiều nhất?',
+          'At the wholesale market roasted coffee sells at the market price of 40 (thousand VND/kg). You are a price taker. Your cost is TC = q² + 10q + 100. How many kg should you sell?'),
+  label:V('Sản lượng q','Output q'),unit:'kg',min:0,max:30,start:25,
+  f:function(q){return 40*q-(q*q+10*q+100);},
+  rows:function(q){return [[L('Doanh thu','Revenue'),fmt(40*q)],[L('Tổng chi phí','Total cost'),fmt(q*q+10*q+100)],[L('Chi phí biên MC','Marginal cost MC'),2*q+10]];},
+  vlabel:V('Lợi nhuận','Profit'),vunit:'',
+  why:V('Người chấp nhận giá có MR = P = 40. Sản xuất đến khi MC = 2q + 10 = 40, tức q = 15. Lợi nhuận = 600 − 475 = 125. Bán quá 15 kg thì mỗi kg thêm tốn nhiều hơn 40.',
+        'A price taker has MR = P = 40. Produce until MC = 2q + 10 = 40, so q = 15. Profit = 600 − 475 = 125. Beyond 15 kg each extra kg costs more than 40.')},
+ '6.5':{kind:'decide',name:V('Nhiệm vụ độc quyền: thương hiệu duy nhất','Monopolist mission: the only brand'),
+  story:V('Bạn có bằng sáng chế cho dòng cà phê lạnh đóng chai, không ai bán được. Cầu: P = 100 − Q (nghìn đồng/chai, Q nghìn chai). Chi phí TC = 20Q + 400. Chọn sản lượng; giá sẽ theo đường cầu.',
+          'You hold a patent on bottled cold brew; nobody else can sell it. Demand: P = 100 − Q (thousand VND a bottle, Q in thousands). Cost TC = 20Q + 400. Pick the output; the price follows demand.'),
+  label:V('Sản lượng Q','Output Q'),unit:V('nghìn chai','k bottles'),min:0,max:90,start:70,
+  f:function(q){return (100-q)*q-(20*q+400);},
+  rows:function(q){return [[L('Giá P','Price P'),100-q],[L('Doanh thu biên MR','Marginal revenue MR'),100-2*q],[L('Chi phí biên MC','Marginal cost MC'),20]];},
+  vlabel:V('Lợi nhuận','Profit'),vunit:'',
+  why:V('MR = 100 − 2Q. Lợi nhuận lớn nhất khi MR = MC: 100 − 2Q = 20, Q = 40, P = 60, lợi nhuận = 40 × 40 − 400 = 1.200. Cạnh tranh hoàn hảo sẽ bán Q = 80 ở P = 20; phần giao dịch mất đi là tổn thất vô ích 800.',
+        'MR = 100 − 2Q. Profit peaks where MR = MC: 100 − 2Q = 20, Q = 40, P = 60, profit = 40 × 40 − 400 = 1,200. A competitive market would sell 80 at P = 20; the lost trades are a deadweight loss of 800.')},
+ '7.5':{kind:'rounds',name:V('Nhiệm vụ: cuộc chiến giá 5 tuần','Mission: a 5-week price war'),
+  story:V('Quán đối diện bán cùng loại cà phê. Mỗi tuần hai quán chọn giá Cao hoặc Thấp. Cả hai Cao: mỗi quán lãi 100. Cả hai Thấp: mỗi quán 60. Một Cao một Thấp: quán Thấp lãi 150, quán Cao 40. Đối thủ chơi “ăn miếng trả miếng”: tuần đầu chọn Cao, sau đó làm theo bạn tuần trước. Tối đa tổng lãi 5 tuần.',
+          'The shop across the road sells the same coffee. Each week both choose a High or Low price. Both High: 100 each. Both Low: 60 each. One High, one Low: the Low shop earns 150, the High one 40. Your rival plays tit-for-tat: High in week 1, then copies your last move. Maximise your 5-week total.')}
+};
+var PAY={HH:[100,100],LL:[60,60],LH:[150,40],HL:[40,150]};
+function bestOf(m){var b=null,bx=null;for(var x=m.min;x<=m.max;x++){var v=m.f(x);if(b===null||(m.lower?v<b:v>b)){b=v;bx=x;}}return {v:b,x:bx};}
+
+/* ================= NODES ================= */
+var NODES=[];
+WORLDS.forEach(function(w,wi){
+  for(var k=1;k<=4;k++){var id=(wi+1)+'.'+k;NODES.push({id:id,w:wi,kind:'stage',name:V(STAGE_VI[id],STAGE_EN[id])});}
+  NODES.push({id:(wi+1)+'.5',w:wi,kind:'mission',name:MISSIONS[(wi+1)+'.5'].name});
+  NODES.push({id:(wi+1)+'.★',w:wi,kind:'boss',name:wi===6?V('Thương vụ lớn cuối cùng: tổng ôn C1–C7','The final big deal: review of C1–C7'):V('Thương vụ lớn: trùm '+w.t.vi.toLowerCase(),'Big deal: '+w.t.en+' boss')});
+});
+var N=NODES.length;
+
+/* ================= NPCs ================= */
+var NPC={
+ customer:{face:'🙋',name:V('Khách hàng','Customer'),line:V('“Cho mình hỏi chút…”','"Can I ask you something…"'),cap:50,xp:10,from:0,ch:[2,3]},
+ supplier:{face:'🚚',name:V('Nhà cung cấp','Supplier'),line:V('“Giá nguyên liệu tuần này…”','"About input prices this week…"'),cap:60,xp:10,from:0,ch:[2,4]},
+ banker:{face:'🏦',name:V('Ngân hàng','Banker'),line:V('“Trước khi cho vay, trả lời giúp tôi…”','"Before I lend, answer this…"'),cap:80,xp:10,from:0,ch:[1,4]},
+ reporter:{face:'📰',name:V('Phóng viên','Reporter'),line:V('“Tin nóng sáng nay!”','"Breaking news this morning!"'),cap:40,xp:10,from:1,ch:[2,1]},
+ rival:{face:'🏪',name:V('Đối thủ','Rival'),line:V('“Thử xem ai hiểu thị trường hơn!”','"Let\'s see who knows the market better!"'),cap:70,xp:10,from:1,ch:[5,6,7,2]},
+ tax:{face:'🧾',name:V('Cán bộ thuế','Tax officer'),line:V('“Kiểm tra kiến thức chính sách!”','"Policy check!"'),cap:60,xp:10,from:1,ch:[2,6]},
+ investor:{face:'💼',name:V('Nhà đầu tư','Investor'),line:V('“Thuyết phục tôi rót vốn đi.”','"Convince me to invest."'),cap:300,xp:25,from:3,rare:1},
+ professor:{face:'🎓',name:V('Giáo sư','Professor'),line:V('“Câu này lần trước em sai, thử lại nhé.”','"You missed this one last time. Try again."'),cap:50,xp:10,from:99}
+};
+var SHOP=[
+ {id:'hint',kind:'use',face:'💡',price:100,rank:-1,name:V('Thẻ gợi ý','Hint card'),d:V('Loại một đáp án sai khi trả lời NPC.','Removes one wrong answer in an NPC challenge.')},
+ {id:'retry',kind:'use',face:'❤️',price:500,rank:-1,name:V('Vé đấu lại trùm','Boss retry ticket'),d:V('Thêm một mạng khi đánh trùm.','One extra life against a boss.')},
+ {id:'sign',kind:'up',face:'🪧',price:300,rank:-1,name:V('Biển hiệu mới','New shop sign'),d:V('Khách nhận ra xe đẩy của bạn từ xa.','Customers spot your cart from afar.')},
+ {id:'espresso',kind:'up',face:'☕',price:800,rank:0,name:V('Máy pha espresso','Espresso machine'),d:V('Cần qua trùm Thế giới 1.','Needs the World 1 boss beaten.')},
+ {id:'scooter',kind:'up',face:'🛵',price:1500,rank:1,name:V('Xe máy giao hàng','Delivery scooter'),d:V('Cần hạng Quán cà phê.','Needs Cafe rank.')},
+ {id:'van',kind:'up',face:'🚐',price:3000,rank:3,name:V('Xe tải nhỏ','Small van'),d:V('Cần hạng Xưởng rang.','Needs Roastery rank.')},
+ {id:'solar',kind:'up',face:'☀️',price:5000,rank:5,name:V('Pin mặt trời cho xưởng','Solar panels'),d:V('Cần hạng Thương hiệu dẫn đầu.','Needs Market leader rank.')}
+];
+
+/* ================= STATE ================= */
+var KEY='arena-v1',SEATS=20,S;
+function fresh(){return {pos:0,best:{},xp:0,cap:500,inv:{hint:0,retry:0},owned:[],review:[],seen:[],npcs:[],nid:1,teacher:false,att:{},hist:[],updated:0,hide:false,epoch:0,resetSeen:0};}
+function normalize(x){var f=fresh();if(!x||typeof x!=='object'||typeof x.pos!=='number'||x.pos>=N||x.pos<0)return f;
+  Object.keys(f).forEach(function(k){if(x[k]===undefined||x[k]===null)x[k]=f[k];});if(!x.inv.hint)x.inv.hint=x.inv.hint||0;if(!x.inv.retry)x.inv.retry=x.inv.retry||0;return x;}
+try{S=normalize(JSON.parse(localStorage.getItem(KEY)||'null'));}catch(e){S=fresh();}
+function localSave(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function persist(){S.updated=Date.now();localSave();cloudSoon();}
+// attempt log: every finished play of a landmark, replays included (best never goes down)
+function logAttempt(id,score,stars){var a=S.att[id]||{n:0,best:0,last:0,stars:0};a.n++;a.last=score;a.best=Math.max(a.best,score);a.stars=Math.max(a.stars,stars);S.att[id]=a;
+  S.hist.unshift({id:id,s:score,st:stars,t:Date.now()});if(S.hist.length>60)S.hist.length=60;}
+function cleared(id){return (S.best[id]||0)>=1;}
+function rankIndex(){var r=-1;WORLDS.forEach(function(_,i){if(cleared((i+1)+'.★'))r=i;});return r;}
+function cafeStars(){try{var c=JSON.parse(localStorage.getItem('arena-cafe')||'{}')||{};if(c.r1>=1&&c.r2>=1)return Math.min(c.r1,c.r2);}catch(e){}return 0;}
+function syncCafe(){var s=cafeStars();if(s>(S.best['2.5']||0)){var first=!cleared('2.5');S.best['2.5']=s;logAttempt('2.5',Math.round(s/3*100),s);if(first){S.xp+=20;S.cap+=200;toast(L('Qua mini game Chủ quán cà phê! +200k vốn','Cafe Owner cleared! +200k capital'));}persist();}}
+
+/* ================= CLASS CLOUD: db + user (each account saves its own progress; 20 seats) ================= */
+var cloud={mode:'local',db:null,user:null,uid:null,ref:null,owner:false,players:[],board:[],saving:false,again:false,timer:null,
+  runtime:!!(window.claude&&typeof window.claude.use==='function')};
+var asStudent=false;try{asStudent=localStorage.getItem('arena-as-student')==='1';}catch(e){}
+// teacher tools: the artifact owner (or a local copy with no claude.ai runtime), unless previewing as a student
+// a local copy with no runtime counts as the teacher's, except the public web release (ARENA_RELEASE)
+function teacherAllowed(){return (cloud.owner||(!cloud.runtime&&!window.ARENA_RELEASE))&&!asStudent;}
+function canPreview(){return cloud.owner||(!cloud.runtime&&!window.ARENA_RELEASE);}
+function boardOpen(){return teacherAllowed()||!!(cloud.cfg&&cloud.cfg.showBoard);}
+function summary(){var stars=0,cl=0;Object.keys(S.best).forEach(function(k){stars+=S.best[k];if(S.best[k]>=1)cl++;});return {stars:stars,cleared:cl};}
+function cloudSoon(){if(cloud.mode!=='on')return;clearTimeout(cloud.timer);cloud.timer=setTimeout(cloudPush,1200);}
+function cloudPush(){
+  if(cloud.mode!=='on')return;if(cloud.saving){cloud.again=true;return;}cloud.saving=true;
+  var sm=summary(),body={xp:S.xp,cap:S.cap,stars:sm.stars,cleared:sm.cleared,pos:S.pos,rank:rankIndex(),updated:S.updated,hide:!!S.hide,teacher:cloud.owner,
+    missed:S.review.slice(-60),state:JSON.parse(JSON.stringify(S))};
+  if(SHEETS){sheetsPush(body);return;}
+  cloud.ref.set(body).then(function(){return cloud.db.doc('board/'+cloud.uid).set({xp:body.xp,stars:body.stars,cleared:body.cleared,hide:body.hide,teacher:body.teacher,updated:body.updated});}).then(function(){cloud.saving=false;cloud.last=Date.now();hud();if(cloud.again){cloud.again=false;cloudPush();}},
+    function(e){cloud.saving=false;if(e&&e.code==='invalid_argument'){cloud.mode='readonly';}else if(e&&e.code==='quota_exceeded'){cloud.mode='readonly';toast(L('Bộ nhớ lớp đã đầy. Tiến độ chỉ lưu trên máy này.','The class storage is full. Progress is saved on this device only.'));}
+      else if(e&&e.code==='unavailable'){setTimeout(cloudPush,2500+Math.random()*2000);}hud();});
+}
+function initCloud(){
+  if(!window.claude||typeof window.claude.use!=='function')return;
+  Promise.all([window.claude.use('db'),window.claude.use('user')]).then(function(r){
+    var db=r[0],user=r[1];cloud.user=user;if(!user){hud();return;}
+    return Promise.all([user.isOwner(),user.id()]).then(function(v){
+      cloud.owner=v[0];cloud.uid=v[1];if(!db||!cloud.uid){hud();panel();return;}
+      cloud.db=db;cloud.ref=db.doc('players/'+cloud.uid);
+      db.collection('players').onSnapshot(function(snap){cloud.players=snap.docs.map(function(d){var x=d.data()||{};return {id:d.id,xp:x.xp||0,stars:x.stars||0,cleared:x.cleared||0,pos:x.pos||0,rank:x.rank,updated:x.updated||0,hide:!!x.hide,teacher:!!x.teacher,test:!!x.test,label:typeof x.label==='string'?x.label:'',missed:x.missed||[],att:(x.state&&x.state.att)||{},hist:(x.state&&x.state.hist)||[],best:(x.state&&x.state.best)||{}};});
+        if(sheetMode==='board')renderBoard();if(P&&P.kind==='dash')renderDash();hud();},function(){});
+      db.collection('board').onSnapshot(function(snap){cloud.board=snap.docs.map(function(d){var x=d.data()||{};return {id:d.id,xp:x.xp||0,stars:x.stars||0,cleared:x.cleared||0,hide:!!x.hide,teacher:!!x.teacher,test:!!x.test,label:typeof x.label==='string'?x.label:''};});
+        if(sheetMode==='board')renderBoard();},function(){});
+      try{db.doc('class/config').onSnapshot(function(snap){cloud.cfg=snap.exists?(snap.data()||{}):{};applyConfig();panel();if(sheetMode==='board')renderBoard();if(P&&P.kind==='dash')renderDash();},function(){});}catch(e){}
+      return db.doc('class/config').get().then(function(c){cloud.cfg=c.exists?(c.data()||{}):{};applyConfig();return cloud.ref.get();}).then(function(mine){
+        if(mine.exists){var d=mine.data();cloud.mode='on';
+          if(d.state&&(d.state.updated||0)>(S.updated||0)){S=normalize(JSON.parse(JSON.stringify(d.state)));localSave();toast(L('Đã tải tiến độ của bạn từ lớp.','Loaded your progress from the class.'));}
+          else cloudPush();
+        }else{
+          return db.collection('board').get().then(function(all){
+            var seats=all.docs.filter(function(x){var b=x.data()||{};return !b.teacher&&!b.test;}).length;
+            if(!cloud.owner&&seats>=SEATS){cloud.mode='full';toast(L('Lớp demo đã đủ '+SEATS+' chỗ. Bạn vẫn chơi được, tiến độ lưu trên máy này.','The demo class is full ('+SEATS+' seats). You can still play; progress stays on this device.'));}
+            else{cloud.mode='on';cloudPush();}
+          });
+        }
+      }).then(function(){renderMap();});
+    });
+  }).catch(function(){hud();});
+}
+// RESET: the owner writes class/config {epoch, resets:{uid:time}} and deletes the player docs.
+// Every device compares it with its own save, so old local progress cannot come back.
+function needsReset(){var c=cloud.cfg||{},mine=(c.resets||{})[cloud.uid]||0;return !cloud.owner&&((c.epoch||0)>(S.epoch||0)||mine>(S.resetSeen||0));}
+function applyConfig(){if(!needsReset())return;if(P){cloud.pendingReset=true;return;}doReset();}
+function doReset(){var c=cloud.cfg||{};S=fresh();S.epoch=c.epoch||0;S.resetSeen=(c.resets||{})[cloud.uid]||0;S.updated=Date.now();localSave();cloud.pendingReset=false;
+  if(cloud.mode==='on')cloudPush();renderMap();follow(0);toast(L('Giáo viên đã đặt lại tiến độ. Bắt đầu lại từ xe đẩy cà phê!','Your teacher reset the progress. Back to the coffee cart!'));}
+function writeConfig(patch){if(SHEETS)return api('setConfig',{patch:patch}).then(function(res){if(res.ok)cloud.cfg=res.cfg;});var cfg=Object.assign({},cloud.cfg||{},patch);cloud.cfg=cfg;return cloud.db.doc('class/config').set(cfg);}
+function deleteSeq(ids){return ids.reduce(function(pr,id){return pr.then(function(){return cloud.db.doc('players/'+id).delete();}).then(function(){return cloud.db.doc('board/'+id).delete();});},Promise.resolve());}
+function resetPlayer(uid){if(SHEETS)return api('reset',{id:uid}).then(function(res){if(res.ok){cloud.cfg=res.cfg;toast(L('Đã đặt lại người chơi.','Player reset.'));}return sheetsDash();});var c=cloud.cfg||{},r=Object.assign({},c.resets||{});r[uid]=Date.now();
+  return writeConfig({resets:r}).then(function(){return deleteSeq([uid]);}).then(function(){toast(L('Đã đặt lại người chơi.','Player reset.'));},function(){toast(L('Không đặt lại được. Thử lại sau.','Could not reset. Try again later.'));});}
+function resetAll(){if(SHEETS)return api('reset',{all:true}).then(function(res){if(res.ok){cloud.cfg=res.cfg;toast(L('Đã đặt lại toàn bộ lớp.','The whole class was reset.'));}return sheetsDash();});var c=cloud.cfg||{},ids=cloud.players.concat(cloud.board).filter(function(p){return !p.teacher;}).map(function(p){return p.id;}).filter(function(id,i,a){return a.indexOf(id)===i;});
+  return writeConfig({epoch:(c.epoch||0)+1,resets:{}}).then(function(){return deleteSeq(ids);}).then(function(){toast(L('Đã đặt lại toàn bộ lớp.','The whole class was reset.'));},function(){toast(L('Không đặt lại được. Thử lại sau.','Could not reset. Try again later.'));});}
+function pname(p,ps){return p.label||(ps[p.id]&&ps[p.id].name)||L('Học viên','Student');}
+function openDash(){if(!teacherAllowed())return;closeSheet();P={kind:'dash',sel:null,confirm:null,xp:0,node:{id:'',name:V('','')}};openPlay();renderDash();if(SHEETS)sheetsDash();}
+function renderDash(){
+  var list=cloud.players.filter(function(p){return !p.teacher;}).sort(function(a,b){return b.xp-a.xp;}),ids=list.map(function(p){return p.id;});
+  el('play-title').innerHTML=L('Bảng điều khiển lớp','Class dashboard');el('play-hud').innerHTML='';
+  names(ids,function(ps){
+    if(!P||P.kind!=='dash')return;
+    var real=list.filter(function(p){return !p.test&&!p.waiting;}),day=Date.now()-864e5,h='';
+    var avg=function(f){return real.length?Math.round(real.reduce(function(a,p){return a+f(p);},0)/real.length):0;};
+    h+='<div class="kpis" style="grid-template-columns:repeat(4,1fr)"><div class="kpi"><span>'+L('Học viên','Students')+'</span><b>'+real.length+'/'+(cloud.seats||SEATS)+'</b></div><div class="kpi"><span>'+L('XP TB','Avg XP')+'</span><b>'+avg(function(p){return p.xp;})+'</b></div><div class="kpi"><span>'+L('Mốc TB','Avg stops')+'</span><b>'+avg(function(p){return p.cleared;})+'</b></div><div class="kpi"><span>'+L('Chơi 24h','Active 24h')+'</span><b>'+real.filter(function(p){return p.updated>day;}).length+'</b></div></div>';
+    if(cloud.db)h+='<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="showboard"'+(cloud.cfg&&cloud.cfg.showBoard?' checked':'')+'> '+L('Cho học viên xem bảng xếp hạng lớp (XP, sao; tên ẩn được)','Let students see the class leaderboard (XP and stars; names can be hidden)')+'</label>';
+    if(!cloud.db)h+='<p class="fb hint">'+L('Bảng điều khiển cần mở game trong claude.ai.','The dashboard needs the game opened in claude.ai.')+'</p>';
+    if(!list.length)h+='<div class="card" style="margin-top:12px"><p class="muted">'+L('Chưa có người chơi nào. Mời học viên làm Biên tập viên (Editor) qua email; họ sẽ xuất hiện ở đây sau khi mở game.','No players yet. Invite students by email as Editors; they appear here once they open the game.')+'</p></div>';
+    else{
+      h+='<div class="card" style="margin-top:12px;padding:12px"><div class="tbl-wrap"><table><thead><tr><th>'+L('Người chơi','Player')+'</th><th>XP</th><th>★</th><th>'+L('Mốc','Stops')+'</th><th>'+L('Đang ở','At')+'</th><th>'+L('Lượt','Plays')+'</th><th>'+L('Hoạt động','Active')+'</th><th></th></tr></thead><tbody>';
+      list.forEach(function(p){var plays=0;Object.keys(p.att).forEach(function(k){plays+=p.att[k].n||0;});
+        h+='<tr'+(P.sel===p.id?' class="best"':'')+'><td><button class="btn ghost" style="padding:4px 8px;font-size:13px" data-act="dsel" data-id="'+esc(p.id)+'">'+esc(pname(p,ps))+(p.test?' · TEST':'')+(p.waiting?' · '+L('chưa chơi','not started'):'')+'</button></td><td>'+p.xp+'</td><td>'+p.stars+'</td><td>'+p.cleared+'/'+N+'</td><td>'+(NODES[p.pos]?NODES[p.pos].id:'—')+'</td><td>'+plays+'</td><td>'+ago(p.updated)+'</td><td>'+(p.waiting?'':'<button class="btn ghost" style="padding:4px 8px;font-size:13px" data-act="dreset" data-id="'+esc(p.id)+'">'+(P.confirm===p.id?L('Chắc chắn?','Sure?'):L('Đặt lại','Reset'))+'</button>')+'</td></tr>';});
+      h+='</tbody></table></div></div>';
+      var sp=list.filter(function(p){return p.id===P.sel;})[0];
+      if(sp){h+='<div class="card" style="margin-top:12px"><span class="tag">'+esc(pname(sp,ps))+'</span><p class="small muted">'+L('Số sao ở từng mốc (hàng = chương; 0 = đã chơi chưa qua)','Stars at each stop (row = chapter; 0 = played, not cleared)')+'</p><div class="tbl-wrap"><table><thead><tr><th>Ch.</th><th>.1</th><th>.2</th><th>.3</th><th>.4</th><th>'+L('NV','Msn')+'</th><th>★</th></tr></thead><tbody>';
+        WORLDS.forEach(function(_,wi){h+='<tr><td>C'+(wi+1)+'</td>';[1,2,3,4,5,'★'].forEach(function(k){var id=(wi+1)+'.'+k,b=sp.best[id]||0,a=sp.att[id];h+='<td title="'+id+'">'+(b?'★'.repeat(b):(a?'0':'·'))+'</td>';});h+='</tr>';});
+        h+='</tbody></table></div>';
+        if(sp.hist.length){h+='<p class="eyebrow" style="margin:12px 0 4px">'+L('Lượt chơi gần đây','Recent plays')+'</p>';sp.hist.slice(0,10).forEach(function(x){var nd=NODES.filter(function(n){return n.id===x.id;})[0];h+='<div class="rowline"><span>'+esc(x.id)+' · '+esc(nd?tx(nd.name):'')+' · '+ago(x.t)+'</span><b>'+x.s+'% '+'★'.repeat(x.st)+'</b></div>';});}
+        h+='</div>';}
+      var miss={};real.forEach(function(p){p.missed.forEach(function(id){miss[id]=(miss[id]||0)+1;});});
+      var top=Object.keys(miss).sort(function(a,b){return miss[b]-miss[a];}).slice(0,10);
+      if(top.length){h+='<div class="card" style="margin-top:12px"><p class="eyebrow" style="margin:0 0 6px">'+L('Câu nhiều học viên đang sai','Questions most students are missing')+'</p>';
+        top.forEach(function(id){var q=Bank&&Bank.text(id);if(q)h+='<div class="rowline"><span>'+q.st+' · '+esc(q.q.length>120?q.q.slice(0,120)+'…':q.q)+'</span><b>'+miss[id]+'</b></div>';});h+='</div>';}
+    }
+    el('play-body').innerHTML=h;
+    el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Đóng','Close')+'</button>'+(SHEETS?'<button class="btn ghost" data-act="drefresh">↻</button>':'')+(list.length?'<button class="btn ghost" data-act="csv">CSV</button><button class="btn" style="background:var(--bad);border-color:var(--bad)" data-act="dresetall">'+(P.confirm==='all'?L('Bấm lần nữa để xóa hết','Tap again to reset all'):L('Đặt lại tất cả','Reset all'))+'</button>':'');
+  });
+}
+
+function cloudPill(){
+  if(cloud.mode==='on')return '☁ '+L('Đã lưu vào lớp','Saved to class');
+  if(cloud.mode==='offline')return L('Mất kết nối · lưu trên máy','Offline · saved on device');
+  if(cloud.mode==='full')return L('Lớp đủ chỗ · lưu trên máy','Class full · saved on device');
+  if(cloud.mode==='readonly'||(cloud.user&&!cloud.db))return L('Chỉ xem · lưu trên máy','View only · saved on device');
+  return L('Lưu trên máy này','Saved on this device');
+}
+function ago(t){if(!t)return '—';var m=Math.round((Date.now()-t)/60000);return m<1?L('vừa xong','just now'):m<60?m+L(' phút trước',' min ago'):m<1440?Math.round(m/60)+L(' giờ trước',' h ago'):Math.round(m/1440)+L(' ngày trước',' d ago');}
+function names(ids,cb){if(SHEETS){var m={};ids.forEach(function(id){m[id]={name:cloud.nameMap[id]||''};});cb(m);return;}if(!cloud.user||!ids.length){cb({});return;}cloud.user.profiles(ids).then(cb,function(){cb({});});}
+function renderBoard(){
+  if(!boardOpen()){el('sheet').innerHTML='<div class="who"><div class="face" aria-hidden="true">🏆</div><div><b>'+L('Bảng xếp hạng lớp','Class leaderboard')+'</b></div></div><p class="muted">'+L('Giáo viên chưa mở bảng xếp hạng.','Your teacher has not opened the leaderboard.')+'</p><div class="acts"><button class="btn" data-act="closesheet">'+L('Đóng','Close')+'</button></div>';return;}
+  var list=cloud.board.filter(function(p){return !p.teacher;}).sort(function(a,b){return b.xp-a.xp;}),me=cloud.uid,h='';
+  h+='<div class="who"><div class="face" aria-hidden="true">🏆</div><div><b>'+L('Bảng xếp hạng lớp','Class leaderboard')+'</b><span class="muted small">'+list.filter(function(p){return !p.test;}).length+'/'+(cloud.seats||SEATS)+L(' chỗ đã dùng',' seats used')+' · '+cloudPill()+'</span></div></div>';
+  if(!cloud.db)h+='<p class="fb hint">'+L('Bảng xếp hạng cần mở game trong claude.ai bằng tài khoản được mời.','The leaderboard needs the game opened in claude.ai with an invited account.')+'</p>';
+  else if(!list.length)h+='<p class="muted">'+L('Chưa có ai trong lớp. Qua một chặng để lên bảng.','Nobody has joined yet. Clear a stage to appear here.')+'</p>';
+  else{h+='<div class="tbl-wrap"><table><thead><tr><th>#</th><th>'+L('Người chơi','Player')+'</th><th>XP</th><th>★</th><th>'+L('Mốc','Stops')+'</th></tr></thead><tbody>';
+    list.forEach(function(p,i){h+='<tr'+(p.id===me?' class="best"':'')+'><td>'+(i+1)+'</td><td data-name="'+esc(p.id)+'" data-hide="'+(p.hide&&p.id!==me?1:0)+'">'+(p.id===me?L('Bạn','You'):'…')+'</td><td>'+p.xp+'</td><td>'+p.stars+'</td><td>'+p.cleared+'/'+N+'</td></tr>';});
+    h+='</tbody></table></div>';}
+  if(cloud.mode==='on')h+='<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="hide-me"'+(S.hide?' checked':'')+'> '+L('Ẩn tên tôi với các bạn khác','Hide my name from other students')+'</label>';
+  h+='<div class="acts" style="margin-top:12px">'+(teacherAllowed()?'<button class="btn ghost" data-act="teacherboard">📊 '+L('Bảng điều khiển','Dashboard')+'</button>':'')+'<button class="btn" data-act="closesheet">'+L('Đóng','Close')+'</button></div>';
+  el('sheet').innerHTML=h;fillNames();
+}
+function fillNames(){var cells=[].slice.call(el('sheet').querySelectorAll('[data-name]')),ids=cells.map(function(c){return c.dataset.name;});
+  names(ids,function(ps){cells.forEach(function(c){var id=c.dataset.name;if(id===cloud.uid&&!teacherAllowed()){c.textContent=L('Bạn','You');return;}
+    var pl=cloud.board.concat(cloud.players).filter(function(p){return p.id===id;})[0];
+    c.textContent=c.dataset.hide==='1'?L('Ẩn danh','Anonymous'):((pl&&pl.label)||(ps[id]&&ps[id].name)||L('Học viên','Student'))+(pl&&pl.test?' · TEST':'');});});}
+function exportCsv(){
+  var list=cloud.players.filter(function(p){return !p.teacher;}),ids=list.map(function(p){return p.id;});
+  names(ids,function(ps){
+    var cols=['student','xp','stars','stops_cleared','current_stop'].concat(NODES.map(function(n){return 'stars_'+n.id;})),rows=[cols.join(',')];
+    list.forEach(function(p){var r=[pname(p,ps)+(p.test?' (TEST)':''),p.xp,p.stars,p.cleared,NODES[p.pos]?NODES[p.pos].id:''];
+      NODES.forEach(function(n){r.push(p.att[n.id]?p.att[n.id].stars:0);});
+      rows.push(r.map(function(v){v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(','));});
+    saveFile('economics-arena-class.csv','\ufeff'+rows.join('\n'));
+  });
+}
+
+/* ================= SHEETS BACKEND (free web release): name + code login against the class Google Sheet =================
+   Active when config.js sets window.ARENA_API to the Apps Script /exec URL; otherwise the claude.ai runtime is used. */
+var API=String(window.ARENA_API||'').trim(),SHEETS=!!API;
+if(SHEETS)cloud.runtime=true;
+cloud.nameMap={};
+var sess=null;try{sess=JSON.parse(localStorage.getItem('arena-session')||'null');}catch(e){}
+function api(action,data){return fetch(API,{method:'POST',body:JSON.stringify(Object.assign({action:action,token:sess&&sess.token},data||{}))}).then(function(r){return r.json();});}
+function sheetsStart(res){
+  cloud.owner=sess.role==='teacher';cloud.uid=sess.id;cloud.db={sheets:true};cloud.bankInfo=res.bankInfo||cloud.bankInfo||null;cloud.cfg=res.cfg||{};cloud.seats=res.seats;cloud.mode='on';cloud.nameMap[sess.id]=sess.name;
+  if(S.uid&&S.uid!==sess.id)S=fresh();          // a different person's save on this device
+  var st=res.state;
+  if(st&&(st.updated||0)>(S.updated||0))S=normalize(st);
+  S.uid=sess.id;localSave();
+  if(needsReset())doReset();else cloudPush();
+  renderMap();
+}
+function sheetsInit(){
+  if(!sess){showLogin();return;}
+  api('hello').then(function(res){
+    if(!res.ok){if(res.error==='auth')logout(true);else{cloud.mode='offline';hud();}return;}
+    sheetsStart(res);
+  },function(){cloud.mode='offline';hud();toast(L('Không kết nối được máy chủ lớp. Tiến độ lưu tạm trên máy này.','Cannot reach the class server. Progress is kept on this device for now.'));});
+}
+function showLogin(msg){
+  var o=el('login');o.hidden=false;document.body.classList.add('locked');
+  el('lg-err').textContent=msg||'';el('lg-err').hidden=!msg;
+  el('lg-title').textContent=L('Đăng nhập vào lớp','Sign in to your class');
+  el('lg-sub').textContent=L('Nhập tên và mã giáo viên đã cấp cho bạn.','Enter the name and code your teacher gave you.');
+  el('lg-name-l').textContent=L('Họ và tên','Full name');el('lg-code-l').textContent=L('Mã đăng nhập','Login code');
+  el('lg-go').textContent=L('Vào lớp','Enter class');
+  setTimeout(function(){try{el('lg-name').focus();}catch(e){}},50);
+}
+function doLogin(){
+  var name=el('lg-name').value.trim(),code=el('lg-code').value.trim(),btn=el('lg-go');
+  if(!name||!code){showLogin(L('Hãy nhập cả tên và mã.','Enter both your name and code.'));return;}
+  btn.disabled=true;btn.textContent=L('Đang kiểm tra…','Checking…');
+  api('login',{name:name,code:code}).then(function(res){
+    btn.disabled=false;
+    if(!res.ok){showLogin(res.error==='locked'?L('Sai quá nhiều lần. Thử lại sau 10 phút.','Too many wrong tries. Try again in 10 minutes.'):L('Tên hoặc mã chưa đúng. Kiểm tra lại với giáo viên.','That name or code is not right. Check with your teacher.'));return;}
+    sess={token:res.token,id:res.me.id,name:res.me.name,role:res.me.role};
+    try{localStorage.setItem('arena-session',JSON.stringify(sess));}catch(e){}
+    el('lg-code').value='';el('login').hidden=true;document.body.classList.remove('locked');
+    sheetsStart(res);toast(L('Xin chào, ','Welcome, ')+res.me.name+'!');
+  },function(){btn.disabled=false;showLogin(L('Không kết nối được máy chủ. Kiểm tra mạng và thử lại.','Cannot reach the server. Check your connection and try again.'));});
+}
+function logout(expired){
+  sess=null;try{localStorage.removeItem('arena-session');localStorage.removeItem(KEY);}catch(e){}
+  S=fresh();cloud.mode='local';cloud.owner=false;cloud.uid=null;cloud.db=null;cloud.players=[];cloud.board=[];cloud.cfg={};
+  closeSheet();if(P)closePlay();renderMap();
+  showLogin(expired?L('Phiên đăng nhập đã hết hoặc mã đã đổi. Đăng nhập lại.','Your session ended or your code changed. Please sign in again.'):'');
+}
+function sheetsPush(body){
+  api('save',{body:body}).then(function(res){
+    cloud.saving=false;
+    if(res.ok){cloud.cfg=res.cfg||cloud.cfg;cloud.last=Date.now();cloud.mode='on';}
+    else if(res.error==='reset'){cloud.cfg=res.cfg;doReset();return;}
+    else if(res.error==='auth'){logout(true);return;}
+    hud();if(cloud.again){cloud.again=false;cloudPush();}
+  },function(){cloud.saving=false;cloud.mode='offline';hud();setTimeout(function(){if(sess){cloud.mode='on';cloudPush();}},15000);});
+}
+function sheetsBoard(){
+  el('sheet').innerHTML='<p class="muted">'+L('Đang tải bảng xếp hạng…','Loading the leaderboard…')+'</p>';openSheet('board');
+  api('board').then(function(res){if(res.ok){cloud.board=res.players;cloud.seats=res.seats;res.players.forEach(function(p){if(p.name)cloud.nameMap[p.id]=p.name;});}renderBoard();},function(){renderBoard();});
+}
+function sheetsDash(){
+  return api('dash').then(function(res){if(!res.ok)return;cloud.players=res.players;cloud.missedText=res.missedText||{};cloud.cfg=res.cfg;cloud.seats=res.seats;res.players.forEach(function(p){cloud.nameMap[p.id]=p.name;});if(P&&P.kind==='dash')renderDash();});
+}
+function sheetsHello(){if(!SHEETS||!sess||cloud.mode==='local')return;api('hello').then(function(res){if(res.ok){cloud.cfg=res.cfg;applyConfig();panel();}else if(res.error==='auth')logout(true);},function(){});}
+function saveFile(name,text){
+  var go=function(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);};
+  if(SHEETS||!cloud.runtime){go();return;}
+  window.claude.use('downloads').then(function(dl){if(!dl){toast(L('Không tải được tệp ở chế độ xem này.','Downloads are not available in this view.'));return;}
+    dl.save({filename:name,data:text}).catch(function(e){if(e&&e.code!=='declined')toast(L('Không lưu được tệp.','Could not save the file.'));});});
+}
+
+/* ================= BANK HELPERS ================= */
+/* ================= QUESTION SOURCE =================
+   Local: bank.js + bankcore.js in the page (claude.ai build); answer keys kept in this closure.
+   Remote: the web release — no bank in the page; the Google server picks questions and checks answers. */
+var Bank=(function(){
+  if(window.ARENA_BANK&&window.BankCore&&!SHEETS){
+    var keys={},seq=0,items=window.ARENA_BANK.items,vocab=window.ARENA_BANK.vocab;
+    var put=function(k){var id='p'+(++seq);keys[id]=k;return id;};
+    var done=function(x){return Promise.resolve(x.error?{ok:false,error:x.error}:Object.assign({ok:true},x));};
+    var byId={};items.forEach(function(q){byId[q.id]=q;});
+    return {local:true,
+      stage:function(node){var s=BankCore.stage(items,vocab,node);return done({play:put(s.key),tasks:s.pub});},
+      check:function(play,i,ans){return done(keys[play]&&keys[play][i]?BankCore.check(keys[play][i],ans):{error:'expired'});},
+      hint:function(play,i){return done(keys[play]&&keys[play][i]?BankCore.hint(keys[play][i],2):{error:'expired'});},
+      boss:function(node){var s=BankCore.boss(items,node);return done({play:put(s.key),qs:s.pub});},
+      bossCheck:function(play,i,ans){return done(keys[play]&&keys[play][i]?BankCore.single(keys[play][i],ans):{error:'expired'});},
+      npc:function(o){var s=BankCore.npc(items,o);return done({play:put(s.key),q:s.pub});},
+      npcHint:function(play){return done(keys[play]?BankCore.hint(keys[play],1):{error:'expired'});},
+      npcCheck:function(play,ans){return done(keys[play]?BankCore.single(keys[play],ans):{error:'expired'});},
+      info:function(){return {n:items.length,news:items.filter(function(q){return q.src==='v1_new';}).length,vocab:vocab.length};},
+      text:function(id){return byId[id]||null;}};
+  }
+  if(SHEETS)return {local:false,
+    stage:function(node){return api('stage',{node:node});},
+    check:function(play,i,ans){return api('check',{play:play,task:i,answer:ans});},
+    hint:function(play,i){return api('hint',{play:play,task:i});},
+    boss:function(node){return api('boss',{node:node});},
+    bossCheck:function(play,i,ans){return api('bossCheck',{play:play,i:i,answer:ans});},
+    npc:function(o){return api('npc',o);},
+    npcHint:function(play){return api('npcHint',{play:play});},
+    npcCheck:function(play,ans){return api('npcCheck',{play:play,answer:ans});},
+    info:function(){return cloud.bankInfo||null;},
+    text:function(id){return (cloud.missedText||{})[id]||null;}};
+  return null;
+})();
+function bankError(res){
+  var e=res&&res.error;
+  return e==='locked'?L('Mốc này chưa mở cho bạn.','This stop is not open for you yet.'):e==='rate'?L('Bạn đã chơi rất nhiều trong giờ này. Nghỉ một chút rồi quay lại nhé.','You have played a lot this hour. Take a short break and come back.')
+    :e==='no_bank'?L('Giáo viên chưa nhập ngân hàng câu hỏi vào Google Sheet.','Your teacher has not imported the question bank into the Google Sheet yet.')
+    :e==='expired'?L('Lượt chơi đã hết hạn. Hãy chơi lại.','This play has expired. Please start again.'):e==='auth'?L('Phiên đăng nhập đã hết. Đăng nhập lại.','Your session ended. Please sign in again.')
+    :L('Không kết nối được máy chủ. Kiểm tra mạng và thử lại.','Cannot reach the server. Check your connection and try again.');
+}
+function playLoading(title){el('play-title').innerHTML=esc(title);playHud();el('play-body').innerHTML='<p class="loading muted">'+L('Đang lấy câu hỏi…','Fetching questions…')+'</p>';el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button>';}
+function playFail(res){if(res&&res.error==='auth'&&SHEETS){closePlay();logout(true);return;}el('play-body').innerHTML='<div class="fb bad">'+bankError(res)+'</div>';}
+var netFail=function(){return {ok:false,error:'network'};};
+
+function qText(q){return esc(q.q);} // bank text is Vietnamese only (EN pending translation)
+function viBadge(){return lang==='en'?'<span class="tag vi">VI only</span>':'';}
+
+/* ================= MAP GEOMETRY + DRAW ================= */
+var VW=360,GAP=118,PADB=90,PADT=110,H=PADT+PADB+(N-1)*GAP;
+function cx(t){return VW/2+78*Math.sin(t*0.82);}
+function cy(t){return H-PADB-t*GAP;}
+function lanesAt(t){return WORLDS[Math.max(0,Math.min(WORLDS.length-1,Math.floor((t+0.5)/6)))].lanes;}
+function roadW(n){return 30+16*n;}
+function rng(s){var x=Math.sin(s*999.13)*43758.5453;return x-Math.floor(x);}
+function worldNow(){return NODES[S.pos].w;}
+function draw(){
+  var svg=el('road'),s='',W=VW;
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('aria-label',L('Bản đồ con đường kinh doanh','Business road map'));
+  WORLDS.forEach(function(w,wi){var y1=cy(wi*6-0.5),y2=cy(wi*6+5.5);s+='<rect x="0" y="'+Math.min(y1,y2)+'" width="'+W+'" height="'+Math.abs(y1-y2)+'" fill="'+(wi%2?'var(--ground-b)':'var(--ground-a)')+'"/>';});
+  for(var i=0;i<N;i++){var w=NODES[i].w,count=1+Math.floor(w/2);
+    for(var b=0;b<count;b++){var side=(i+b)%2?1:-1,t=i+rng(i*7+b)*0.9-0.45,bh=14+w*8+rng(i*3+b)*18,bw=16+rng(i+b*5)*14;
+      var edge=cx(t)+side*(roadW(lanesAt(t))/2+12+b*4),x=side>0?edge+rng(i*11+b)*20:edge-bw-rng(i*11+b)*20;
+      if(x<2||x+bw>W-2)continue;s+='<rect x="'+x.toFixed(1)+'" y="'+(cy(t)-bh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="2" fill="'+(b%2?'var(--bldg-2)':'var(--bldg)')+'"/>';}}
+  WORLDS.forEach(function(wd,wi){
+    var t0=Math.max(-0.6,wi*6-0.5),t1=Math.min(N-1+0.6,wi*6+5.5),d='',rw=roadW(wd.lanes);
+    for(var t=t0;t<=t1+0.001;t+=0.1)d+=(t===t0?'M':'L')+cx(t).toFixed(1)+' '+cy(t).toFixed(1);
+    s+='<path d="'+d+'" fill="none" stroke="var(--road-edge)" stroke-width="'+(rw+6)+'"/><path d="'+d+'" fill="none" stroke="var(--road)" stroke-width="'+rw+'"/>';
+    for(var k=1;k<wd.lanes;k++){var dx=-rw/2+rw*k/wd.lanes;s+='<path d="'+d+'" transform="translate('+dx.toFixed(1)+' 0)" fill="none" stroke="var(--lane)" stroke-width="2" stroke-dasharray="10 12" opacity=".8"/>';}
+    if(wd.lanes===1)s+='<path d="'+d+'" fill="none" stroke="var(--lane)" stroke-width="1.5" stroke-dasharray="4 14" opacity=".5"/>';
+    var by=cy(wi*6-0.5)-6,lab=L('C','Ch. ')+(wi+1)+' · '+tx(wd.road)+' · '+wd.lanes+L(' làn',wd.lanes>1?' lanes':' lane');
+    s+='<rect x="12" y="'+(by-22)+'" width="'+(W-24)+'" height="26" rx="13" fill="var(--card)" stroke="var(--line)" stroke-width="1.5"/><text x="'+(W/2)+'" y="'+(by-4.5)+'" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">'+esc(lab)+'</text>';
+  });
+  s+='<text x="'+cx(-0.45)+'" y="'+(cy(-0.45)+30)+'" text-anchor="middle" font-size="12" font-weight="700" fill="var(--muted)">'+L('Xuất phát: một xe đẩy cà phê','Start: one coffee cart')+'</text>';
+  NODES.forEach(function(nd,i){
+    var x=cx(i),y=cy(i),done=cleared(nd.id),cur=i===S.pos,open=done||cur||S.teacher;
+    var fill=done?'var(--teal)':cur?'var(--gold)':'var(--card)',ink=done||cur?'#fff':'var(--muted)',stroke=done?'var(--teal)':cur?'var(--gold)':'var(--line)';
+    s+='<g class="node" data-node="'+i+'" role="button" tabindex="0" aria-label="'+nd.id+' '+esc(tx(nd.name))+'">';
+    if(cur)s+='<circle class="cur-ring" cx="'+x+'" cy="'+y+'" r="29" fill="none" stroke="var(--gold)" stroke-width="3"/>';
+    if(nd.kind==='boss')s+='<rect x="'+(x-22)+'" y="'+(y-22)+'" width="44" height="44" rx="10" fill="'+(done?'var(--teal)':'var(--card)')+'" stroke="var(--gold)" stroke-width="3"/><text x="'+x+'" y="'+(y+6)+'" text-anchor="middle" font-size="18" font-weight="800" fill="'+(done?'#fff':'var(--gold)')+'">★</text>';
+    else if(nd.kind==='mission')s+='<rect x="'+(x-17)+'" y="'+(y-17)+'" width="34" height="34" rx="4" transform="rotate(45 '+x+' '+y+')" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.5"/><text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-size="11" font-weight="800" fill="'+ink+'">'+nd.id+'</text>';
+    else s+='<circle cx="'+x+'" cy="'+y+'" r="19" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.5"/><text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-size="11" font-weight="800" fill="'+ink+'">'+(open?nd.id:'·')+'</text>';
+    if(done)s+='<text x="'+x+'" y="'+(y+(nd.kind==='stage'?35:40))+'" text-anchor="middle" font-size="11" fill="var(--gold)">'+'★'.repeat(S.best[nd.id])+'</text>';
+    s+='</g>';
+  });
+  S.npcs.forEach(function(n){var x=cx(n.t)+n.dx,y=cy(n.t),T=NPC[n.type];
+    s+='<g class="npc" data-npc="'+n.id+'" role="button" tabindex="0" aria-label="'+tx(T.name)+'"><g class="bob"><circle cx="'+x+'" cy="'+y+'" r="15" fill="var(--card)" stroke="'+(T.rare?'var(--gold)':'var(--teal)')+'" stroke-width="'+(T.rare?3:2)+'"/><text x="'+x+'" y="'+(y+6)+'" text-anchor="middle" font-size="16">'+T.face+'</text><circle cx="'+(x+11)+'" cy="'+(y-11)+'" r="5" fill="var(--gold)"/><text x="'+(x+11)+'" y="'+(y-8.5)+'" text-anchor="middle" font-size="8" font-weight="800" fill="#fff">!</text></g></g>';});
+  var gear=SHOP.filter(function(it){return S.owned.indexOf(it.id)>=0;}).map(function(it){return it.face;}).join('');
+  s+='<g id="avatar" pointer-events="none" transform="translate('+cx(S.pos).toFixed(1)+' '+(cy(S.pos)-34).toFixed(1)+')"><circle r="15" fill="var(--ink)"/><text y="6" text-anchor="middle" font-size="17">🧑‍💼</text>'+(gear?'<rect x="'+(-gear.length*5-6)+'" y="-38" width="'+(gear.length*10+12)+'" height="20" rx="10" fill="var(--card)" stroke="var(--gold)" stroke-width="1.5"/><text y="-23" text-anchor="middle" font-size="12">'+gear+'</text>':'')+'</g>';
+  s+='<rect x="24" y="14" width="'+(W-48)+'" height="44" rx="12" fill="var(--card)" stroke="var(--teal)" stroke-width="1.5" stroke-dasharray="6 5"/><text x="'+(W/2)+'" y="33" text-anchor="middle" font-size="12" font-weight="800" fill="var(--teal)">'+L('VĨ MÔ · SẮP MỞ','MACRO · COMING NEXT')+'</text><text x="'+(W/2)+'" y="50" text-anchor="middle" font-size="11" fill="var(--muted)">'+L('Từ con đường ra bản đồ quốc gia, rồi thế giới','From the road out to the national map, then the world')+'</text>';
+  svg.innerHTML=s;
+}
+function hud(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-lang]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});
+  var w=WORLDS[worldNow()],r=rankIndex();
+  el('crumb').textContent=L('Vi mô · BEE1037 · Phiên bản 1','Micro · BEE1037 · Version 1')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
+  el('rank').textContent=r<0?L('Khởi nghiệp','Starting out'):tx(WORLDS[r].rank);
+  el('xp').textContent=S.xp+' XP';el('cap').textContent=L('Vốn ','Capital ')+fmt(S.cap)+'k';
+  el('road-pill').textContent=tx(w.road)+' · '+S.npcs.length+' NPC';
+  var cp=el('cloud-pill');if(cp)cp.textContent=cloudPill();
+}
+function panel(){
+  var nd=NODES[S.pos],done=cleared(nd.id),h='';
+  var kind=nd.kind==='boss'?L('Trùm cuối chương','Chapter boss'):nd.kind==='mission'?L('Nhiệm vụ nhập vai','Role-play mission'):L('Chặng','Stage');
+  h+='<div class="eyebrow">'+L('Chương ','Chapter ')+(nd.w+1)+' · '+kind+' '+nd.id+(done?' · '+'★'.repeat(S.best[nd.id]):'')+'</div><h2>'+esc(tx(nd.name))+'</h2><div class="acts">';
+  h+='<button class="btn" data-act="play">'+(done?L('Chơi lại','Replay'):L('Chơi','Play'))+'</button>';
+  if(done&&S.pos<N-1)h+='<button class="btn" data-act="walk">'+L('Đi tiếp','Walk on')+'</button>';
+  h+='<button class="btn ghost" data-act="shop">'+L('Cửa hàng','Shop')+'</button>'+(boardOpen()?'<button class="btn ghost" data-act="board" aria-label="'+L('Bảng xếp hạng lớp','Class leaderboard')+'">🏆</button>':'')+(teacherAllowed()?'<button class="btn ghost" data-act="dash" aria-label="'+L('Bảng điều khiển lớp','Class dashboard')+'">📊</button>':'')+'<button class="btn ghost" data-act="menu" aria-label="'+L('Cài đặt','Settings')+'">⋯</button></div>';
+  if(done&&S.pos===N-1)h+='<p class="muted small" style="margin:8px 0 0">'+L('Bạn đã đi hết con đường Vi mô!','You have walked the whole Micro road!')+'</p>';
+  el('panel').innerHTML=h;
+}
+function renderMap(){hud();draw();panel();}
+
+/* ================= NPC spawning + talk ================= */
+function spawnAhead(){
+  var w=worldNow(),lanes=WORLDS[w].lanes,max=lanes+1,p=0.35+0.04*w;
+  for(var k=0;k<lanes;k++){
+    if(S.npcs.length>=max)break;if(Math.random()>p)continue;
+    var type,r=Math.random();
+    if(S.review.length&&r<0.35)type='professor';
+    else if(w>=NPC.investor.from&&r>=0.94)type='investor';
+    else{var ts=Object.keys(NPC).filter(function(k){return NPC[k].from<=w&&!NPC[k].rare;});type=ts[Math.floor(Math.random()*ts.length)];}
+    var t=Math.min(N-1,S.pos+0.2+Math.random()*1.8),Ln=lanesAt(t),rw=roadW(Ln),lane=Math.floor(Math.random()*Ln),dx=-rw/2+rw*(lane+0.5)/Ln;
+    if(Ln===1)dx=(Math.random()<0.5?-1:1)*(rw/2+16);
+    S.npcs.push({id:S.nid++,type:type,t:t,dx:dx});
+  }
+}
+var talk=null,sheetMode=null;
+function openSheet(mode){sheetMode=mode;el('ov').hidden=false;}
+function closeSheet(){el('ov').hidden=true;sheetMode=null;talk=null;}
+function openNpc(id){
+  var n=S.npcs.filter(function(x){return x.id===id;})[0];if(!n)return;
+  var T=NPC[n.type],world=worldNow()+1;
+  talk={npc:n,q:null,play:null,pick:null,correct:null,removed:null,busy:true};renderTalk();openSheet('talk');
+  var me=talk;
+  Bank.npc({world:world,pref:T.ch||[],investor:!!T.rare,qid:n.type==='professor'&&S.review.length?S.review[0]:0,seen:S.seen.slice(-300)}).then(function(res){
+    if(talk!==me)return;talk.busy=false;if(!res.ok){talk.err=bankError(res);renderTalk();return;}talk.q=res.q;talk.play=res.play;renderTalk();
+  },function(){if(talk!==me)return;talk.busy=false;talk.err=bankError(netFail());renderTalk();});
+}
+function renderTalk(){
+  var T=NPC[talk.npc.type],q=talk.q,done=talk.correct!==null,h='<div class="who"><div class="face" aria-hidden="true">'+T.face+'</div><div><b>'+tx(T.name)+'</b><span class="muted small">'+tx(T.line)+'</span></div></div>';
+  if(!q){h+=talk.err?'<div class="fb bad">'+talk.err+'</div>':'<p class="muted">'+L('Đang lấy câu hỏi…','Fetching a question…')+'</p>';
+    el('sheet').innerHTML=h+'<div class="acts"><button class="btn ghost" data-act="closesheet">'+L('Để sau','Later')+'</button></div>';return;}
+  h+='<span class="tag">'+L('Chương ','Chapter ')+q.ch+'</span>'+viBadge()+'<h3 class="q">'+esc(q.q)+'</h3>';
+  q.opts.forEach(function(o,i){if(i===talk.removed)return;var c='';if(done){if(i===talk.correct)c=' ok';else if(i===talk.pick)c=' no';}else if(talk.pick===i)c=' sel';
+    h+='<button class="opt'+c+'" data-act="npcans" data-i="'+i+'"'+(done||talk.busy?' disabled':'')+'>'+esc(o)+'</button>';});
+  if(done){var ok=talk.pick===talk.correct;h+='<div class="fb '+(ok?'good':'bad')+'"><b>'+(ok?L('Chốt deal! ','Deal done! ')+'+'+T.cap+'k · +'+T.xp+' XP':L('Chưa đúng. Câu này sẽ quay lại với Giáo sư.','Not quite. The Professor will bring this one back.'))+'</b>'+(talk.e?esc(talk.e):'')+'</div><div class="acts"><button class="btn" data-act="closesheet">'+L('Tiếp tục đi','Keep walking')+'</button></div>';}
+  else{if(talk.err)h+='<div class="fb bad">'+talk.err+'</div>';
+    h+='<div class="acts">'+(S.inv.hint>0&&talk.removed===null&&!talk.busy?'<button class="btn ghost" data-act="usehint">💡 '+L('Dùng thẻ gợi ý','Use a hint card')+' ('+S.inv.hint+')</button>':'')+'<button class="btn ghost" data-act="closesheet">'+L('Để sau','Later')+'</button></div>';}
+  el('sheet').innerHTML=h;
+}
+function npcAnswer(i){
+  if(!talk||!talk.q||talk.busy||talk.correct!==null)return;var me=talk,q=talk.q,T=NPC[talk.npc.type];talk.pick=i;talk.busy=true;talk.err='';renderTalk();
+  Bank.npcCheck(talk.play,i).then(function(res){
+    if(talk!==me)return;talk.busy=false;if(!res.ok){talk.err=bankError(res);talk.pick=null;renderTalk();return;}
+    talk.correct=res.correct;talk.e=res.e||'';if(S.seen.indexOf(q.qid)<0)S.seen.push(q.qid);if(S.seen.length>400)S.seen=S.seen.slice(-400);
+    if(i===res.correct){S.cap+=T.cap;S.xp+=T.xp;S.review=S.review.filter(function(x){return x!==q.qid;});}else if(S.review.indexOf(q.qid)<0)S.review.push(q.qid);
+    S.npcs=S.npcs.filter(function(x){return x.id!==talk.npc.id;});persist();renderTalk();hud();draw();
+  },function(){if(talk!==me)return;talk.busy=false;talk.pick=null;talk.err=bankError(netFail());renderTalk();});
+}
+function npcHint(){
+  if(!talk||!talk.q||talk.busy||S.inv.hint<=0||talk.removed!==null)return;var me=talk;talk.busy=true;renderTalk();
+  Bank.npcHint(talk.play).then(function(res){if(talk!==me)return;talk.busy=false;if(res.ok&&res.remove.length){talk.removed=res.remove[0];S.inv.hint--;persist();}renderTalk();},function(){if(talk===me){talk.busy=false;renderTalk();}});
+}
+
+/* ================= shop + settings ================= */
+var shopMsg='';
+function renderShop(){
+  var r=rankIndex(),h='<div class="who"><div class="face" aria-hidden="true">🏬</div><div><b>'+L('Cửa hàng','Shop')+'</b><span class="muted small">'+L('Vốn hiện có: ','Capital: ')+fmt(S.cap)+'k</span></div></div>';
+  [['use',L('Vật phẩm dùng được','Items you use')],['up',L('Nâng cấp kinh doanh','Business upgrades')]].forEach(function(g){
+    h+='<p class="eyebrow" style="margin:12px 0 6px">'+g[1]+'</p>';
+    SHOP.filter(function(it){return it.kind===g[0];}).forEach(function(it){
+      var owned=it.kind==='up'&&S.owned.indexOf(it.id)>=0,locked=it.rank>r,poor=S.cap<it.price;
+      h+='<div style="display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding:9px 0"><span style="font-size:24px" aria-hidden="true">'+it.face+'</span><div style="flex:1;min-width:0"><b>'+tx(it.name)+'</b>'+(it.kind==='use'?' <span class="muted small">× '+S.inv[it.id]+'</span>':'')+'<br><span class="muted small">'+tx(it.d)+'</span></div><button class="btn" style="flex:0 0 auto;padding:8px 12px" data-act="buy" data-id="'+it.id+'"'+(owned||locked||poor?' disabled':'')+'>'+(owned?L('Đã có','Owned'):locked?L('Chưa mở','Locked'):fmt(it.price)+'k')+'</button></div>';});});
+  if(shopMsg)h+='<div class="fb good">'+shopMsg+'</div>';
+  h+='<p class="muted small" style="margin-top:10px">'+L('Kiếm vốn bằng cách qua chặng và trả lời NPC trên đường.','Earn capital by clearing stages and answering NPCs on the road.')+'</p><div class="acts"><button class="btn" data-act="closesheet">'+L('Đóng','Close')+'</button></div>';
+  el('sheet').innerHTML=h;
+}
+function buy(id){var it=SHOP.filter(function(x){return x.id===id;})[0];if(!it||S.cap<it.price||it.rank>rankIndex()||(it.kind==='up'&&S.owned.indexOf(id)>=0))return;
+  S.cap-=it.price;if(it.kind==='use')S.inv[id]++;else S.owned.push(id);shopMsg=L('Đã mua: ','Bought: ')+tx(it.name);persist();renderShop();hud();draw();}
+function renderMenu(confirm){
+  var bi=Bank&&Bank.info(),n=bi?bi.n:0,news=bi?bi.news:0;
+  var h='<h3 class="q">'+L('Cài đặt','Settings')+'</h3>';
+  if(teacherAllowed()&&bi)h+='<p class="small">'+L('Ngân hàng: ','Bank: ')+'<b>'+n+'</b> '+L('câu: ',' questions: ')+(n-news)+' '+L('câu trắc nghiệm từ đề giữa kỳ, cuối kỳ và 3 bộ luyện tập của lớp BEE1037, cộng ','multiple-choice questions from the BEE1037 midterm, final and three practice sets, plus ')+news+L(' câu mới cho C4–C7 (bản nháp chờ thầy duyệt), ',' new draft questions for C4–C7 awaiting review, ')+bi.vocab+L(' thuật ngữ Việt–Anh.',' VI–EN terms.')+'</p>';
+  if(teacherAllowed())h+='<p class="small muted">'+L('Câu hỏi hiện chỉ có tiếng Việt; giao diện có cả hai thứ tiếng.','Questions are in Vietnamese for now; the interface is bilingual.')+'</p>';
+  h+='<p class="small">'+cloudPill()+(cloud.last?' · '+ago(cloud.last):'')+'</p>';
+  if(SHEETS&&sess)h+='<div class="rowline"><span>'+L('Đăng nhập: ','Signed in: ')+'<b>'+esc(sess.name)+'</b>'+(sess.role==='teacher'?' · '+L('giáo viên','teacher'):'')+'</span><button class="btn ghost" style="padding:4px 10px;font-size:13px" data-act="logout">'+L('Đăng xuất','Sign out')+'</button></div>';
+  var hs=S.hist.slice(0,6);if(hs.length){h+='<p class="eyebrow" style="margin:10px 0 4px">'+L('Lượt chơi gần đây','Recent plays')+'</p>';hs.forEach(function(x){h+='<div class="rowline"><span>'+x.id+' · '+ago(x.t)+'</span><b>'+x.s+'% · '+'★'.repeat(x.st)+'</b></div>';});}
+  if(teacherAllowed()){h+='<div class="acts" style="margin-top:12px"><button class="btn ghost" data-act="teacher">'+(S.teacher?L('Tắt chế độ giáo viên','Turn off teacher mode'):L('Chế độ giáo viên: mở mọi chặng','Teacher mode: open every stage'))+'</button></div>';
+  h+='<p class="small muted" style="margin-top:6px">'+L('Chế độ giáo viên cho phép chạm vào bất kỳ mốc nào để nhảy tới và chơi thử.','Teacher mode lets you tap any landmark to jump there and try it.')+'</p>';}
+  if(canPreview())h+='<div class="acts" style="margin-top:12px"><button class="btn ghost" data-act="asstudent">'+(asStudent?L('Về chế độ giáo viên','Back to teacher view'):L('Xem như học viên','View as student'))+'</button></div><p class="small muted" style="margin-top:6px">'+(asStudent?L('Đang xem đúng như học viên: không có bảng điều khiển, CSV, ngân hàng câu hỏi.','You are seeing exactly what students see: no dashboard, CSV or question bank.'):L('Ẩn mọi công cụ giáo viên để kiểm tra giao diện của học viên.','Hide every teacher tool to check the student view.'))+'</p>';
+  h+='<div class="acts" style="margin-top:12px"><button class="btn ghost" data-act="reset">'+(confirm?L('Chắc chắn xóa tiến độ?','Really reset progress?'):L('Xóa tiến độ','Reset progress'))+'</button><button class="btn" data-act="closesheet">'+L('Đóng','Close')+'</button></div>';
+  el('sheet').innerHTML=h;
+}
+
+/* ================= walking ================= */
+var walking=false;
+function walk(){
+  if(walking||S.pos>=N-1||!cleared(NODES[S.pos].id))return;walking=true;
+  var from=S.pos,to=S.pos+1,start=null,dur=matchMedia('(prefers-reduced-motion: reduce)').matches?1:900,av=el('avatar');
+  function step(ts){if(start===null)start=ts;var k=Math.min(1,(ts-start)/dur),t=from+(to-from)*(k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2);
+    av.setAttribute('transform','translate('+cx(t).toFixed(1)+' '+(cy(t)-34).toFixed(1)+')');follow(t);
+    if(k<1)requestAnimationFrame(step);else{S.pos=to;walking=false;S.npcs=S.npcs.filter(function(n){return n.t>=S.pos-0.5;});spawnAhead();persist();renderMap();}}
+  requestAnimationFrame(step);
+}
+function follow(t){var r=el('road').getBoundingClientRect(),sc=r.width/VW;window.scrollTo(0,Math.max(0,r.top+window.scrollY+cy(t)*sc-window.innerHeight*0.55));}
+function toast(m){var t=el('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(function(){t.hidden=true;},2800);}
+
+/* ================= PLAY VIEW ================= */
+var P=null; // current play session
+function openPlay(){document.body.classList.add('locked');el('play').hidden=false;el('play').scrollTop=0;}
+function closePlay(){stopTimer();P=null;el('play').hidden=true;document.body.classList.remove('locked');if(cloud.pendingReset&&needsReset())doReset();else renderMap();}
+function playHud(extra){el('play-hud').innerHTML='<span class="pill xp">'+(P?P.xp:0)+' XP</span>'+(extra||'');}
+function starSvg(on){return '<svg viewBox="0 0 24 24" class="'+(on?'on':'off')+'" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg>';}
+function starRow(n){return '<div class="stars" role="img" aria-label="'+n+'/3">'+starSvg(n>=1)+starSvg(n>=2)+starSvg(n>=3)+'</div>';}
+function starsPct(p){return p>=95?3:p>=80?2:p>=60?1:0;}
+function starsRatio(r){return r>=0.95?3:r>=0.85?2:r>=0.70?1:0;}
+function award(node,stars,cap,score){
+  var first=!cleared(node.id);logAttempt(node.id,score,stars);
+  if(stars>(S.best[node.id]||0))S.best[node.id]=stars;
+  if(stars>=1&&first){S.cap+=cap;}
+  persist();return first&&stars>=1;
+}
+
+/* ---------- stage ---------- */
+function startStage(node){
+  P={node:node,kind:'stage',tasks:null,i:0,xp:0,results:[],busy:false};openPlay();playLoading(node.id+' · '+tx(node.name));
+  var me=P;Bank.stage(node.id).then(function(res){if(P!==me)return;if(!res.ok){playFail(res);return;}P.play=res.play;P.tasks=res.tasks;startTask();renderStage();},function(){if(P===me)playFail(netFail());});
+}
+function startTask(){var t=P.tasks[P.i];P.t={attempt:1,phase:'answer',hinted:false,removed:[],sel:null,ans:t.items?t.items.map(function(){return null;}):null,link:{},pickL:null,wrong:[],final:null,reveal:null,e:''};}
+function taskTag(t){return t.type==='mc'?L('Trắc nghiệm','Multiple choice'):t.type==='tf'?L('Đúng hay sai','True or false'):L('Ghép thuật ngữ Việt ↔ Anh','Term match VI ↔ EN');}
+function renderStage(){
+  var t=P.tasks[P.i],s=P.t,locked=s.phase==='done',rv=s.reveal||{},h='';
+  el('play-title').innerHTML=esc(P.node.id+' · '+tx(P.node.name));playHud();
+  h+='<div class="dots" aria-hidden="true">';P.tasks.forEach(function(_,i){h+='<i class="'+(i<P.i||(i===P.i&&locked)?'done':i===P.i?'cur':'')+'"></i>';});h+='</div>';
+  h+='<div class="card"><span class="tag">'+L('Nhiệm vụ ','Task ')+(P.i+1)+'/5 · '+taskTag(t)+'</span>'+(t.type!=='match'?viBadge():'');
+  if(t.type==='mc'){
+    h+='<h3 class="q">'+esc(t.q)+'</h3>';
+    t.opts.forEach(function(o,i){var c='';
+      if(s.removed.indexOf(i)>=0)c=' gone';
+      else if(s.phase==='answer'){if(s.sel===i)c=' sel';}
+      else if(s.phase==='wrong'){if(s.sel===i)c=' no';}
+      else{if(i===rv.correct)c=' ok';else if(s.sel===i)c=' no';}
+      h+='<button class="opt'+c+'" data-act="mc" data-i="'+i+'"'+(s.phase!=='answer'||P.busy?' disabled':'')+'>'+esc(o)+'</button>';});
+  }else if(t.type==='tf'){
+    h+='<h3 class="q">'+L('Mỗi nhận định dưới đây đúng hay sai?','Is each statement true or false?')+'</h3>';
+    t.items.forEach(function(it,i){var a=s.ans[i],wrongHere=s.wrong.indexOf(i)>=0;
+      h+='<div class="tfrow"><div>'+esc(it.stem.replace(/:\s*$/,''))+': <b>'+esc(it.opt)+'</b></div><div class="tfbtns">'+[true,false].map(function(v){
+        var c='';if(a===v)c=s.phase==='answer'?' sel':(wrongHere?' no':' ok');if(locked&&rv.truth&&v===rv.truth[i])c=' ok';
+        return '<button class="opt'+c+'" data-act="tf" data-i="'+i+'" data-v="'+v+'"'+(s.phase!=='answer'||P.busy?' disabled':'')+'>'+(v?L('Đúng','True'):L('Sai','False'))+'</button>';}).join('')+'</div>'+
+        (locked&&rv.truth&&!rv.truth[i]?'<div class="small muted">'+L('Đáp án đúng: ','Correct answer: ')+esc(rv.right[i])+'</div>':'')+'</div>';});
+  }else{
+    h+='<h3 class="q">'+L('Chạm một thuật ngữ tiếng Việt, rồi chạm nghĩa tiếng Anh của nó.','Tap a Vietnamese term, then its English match.')+'</h3><div class="pairs"><div>';
+    t.vi.forEach(function(vi,i){var linked=s.link[i]!==undefined,c='';
+      if(s.phase==='answer'){if(s.pickL===i)c=' sel';else if(linked)c=' paired';}else c=s.wrong.indexOf(i)>=0?' no':' ok';
+      h+='<button class="opt'+c+'" style="margin-bottom:8px" data-act="ml" data-i="'+i+'"'+(s.phase!=='answer'||P.busy?' disabled':'')+'>'+esc(vi)+(linked&&s.phase==='answer'?' ↔ '+(Object.keys(s.link).indexOf(String(i))+1):'')+'</button>';});
+    h+='</div><div>';
+    t.en.forEach(function(en,j){var by=null;Object.keys(s.link).forEach(function(k){if(s.link[k]===j)by=+k;});var c=by!==null?(s.phase==='answer'?' paired':(s.wrong.indexOf(by)>=0?' no':' ok')):'';
+      if(locked)c=' ok';
+      h+='<button class="opt'+c+'" style="margin-bottom:8px" data-act="mr" data-j="'+j+'"'+(s.phase!=='answer'||P.busy?' disabled':'')+'>'+esc(en)+'</button>';});
+    h+='</div></div>';
+    if(locked&&rv.pairs)h+='<div class="small muted">'+rv.pairs.map(function(p){return esc(p[0])+' = '+esc(p[1]);}).join(' · ')+'</div>';
+  }
+  if(s.hinted&&t.type==='mc')h+='<div class="fb hint"><b>'+L('Gợi ý 50:50','50:50 hint')+'</b>'+L('Đã loại hai đáp án sai.','Two wrong answers removed.')+'</div>';
+  if(s.phase==='wrong')h+='<div class="fb bad">'+L('Chưa đúng. Mục sai đã được đánh dấu. Bạn được thử lại một lần.','Not quite. Wrong items are marked. You can try once more.')+'</div>';
+  if(s.err)h+='<div class="fb bad">'+s.err+'</div>';
+  if(locked){var f=s.final,e=t.type==='mc'&&s.e?'<br>'+L('Giải thích: ','Why: ')+esc(s.e):'';
+    h+='<div class="fb '+(f.ok?'good':'bad')+'"><b>'+(f.ok?(f.attempt===1?L('Chính xác!','Correct!'):L('Đúng rồi, ở lần thử thứ hai.','Right, on your second try.')):L('Chưa đúng. Đáp án đúng đã được tô xanh.','Not quite. The right answers are shown in green.'))+'</b>+'+f.xp+' XP'+e+'</div>';}
+  h+='</div>';
+  el('play-body').innerHTML=h;
+  var a='<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button>';
+  if(s.phase==='answer')a+=(t.type==='mc'?'<button class="btn ghost" data-act="hint"'+(s.hinted||P.busy?' disabled':'')+'>'+L('50:50 (−5 XP)','50:50 (−5 XP)')+'</button>':'')+'<button class="btn" data-act="check"'+(ready()&&!P.busy?'':' disabled')+'>'+(P.busy?L('Đang kiểm tra…','Checking…'):L('Kiểm tra','Check'))+'</button>';
+  else if(s.phase==='wrong')a+='<button class="btn" data-act="retry">'+L('Thử lại','Try again')+'</button>';
+  else a+='<button class="btn" data-act="next">'+(P.i===4?L('Xem kết quả','See results'):L('Tiếp tục','Next'))+'</button>';
+  el('play-bar').innerHTML=a;
+}
+function ready(){var t=P.tasks[P.i],s=P.t;
+  if(t.type==='mc')return s.sel!==null;if(t.type==='tf')return s.ans.every(function(v){return v!==null;});
+  return Object.keys(s.link).length===t.vi.length;}
+function answerOf(){var t=P.tasks[P.i],s=P.t;
+  if(t.type==='mc')return s.sel;if(t.type==='tf')return s.ans.slice();
+  return t.vi.map(function(_,i){return s.link[i]===undefined?-1:s.link[i];});}
+function check(){
+  if(P.busy)return;var s=P.t,hc=s.hinted?5:0,me=P;P.busy=true;s.err='';renderStage();
+  Bank.check(P.play,P.i,answerOf()).then(function(res){
+    if(P!==me)return;P.busy=false;
+    if(!res.ok){s.err=bankError(res);renderStage();return;}
+    s.wrong=res.wrong;
+    if(res.final){s.reveal=res.reveal;s.e=res.e||'';var ok=!res.wrong.length;
+      s.final=ok?{ok:true,attempt:res.attempt,score:res.attempt===1?100:60,xp:Math.max(0,res.right*(res.attempt===1?15:10)-hc)}
+                :{ok:false,attempt:res.attempt,score:Math.round(40*res.right/res.n),xp:Math.max(0,res.right*5-hc)};
+      finishTask();}
+    else{s.attempt=2;s.phase='wrong';renderStage();}
+  },function(){if(P!==me)return;P.busy=false;s.err=bankError(netFail());renderStage();});
+}
+function finishTask(){var s=P.t,t=P.tasks[P.i];s.phase='done';P.xp+=s.final.xp;P.results[P.i]=s.final;
+  if(t.type==='mc'&&!s.final.ok&&S.review.indexOf(t.qid)<0)S.review.push(t.qid);
+  renderStage();}
+function retry(){var t=P.tasks[P.i],s=P.t;s.phase='answer';
+  if(t.type==='mc')s.sel=null;else if(t.type==='tf')s.wrong.forEach(function(i){s.ans[i]=null;});else{s.wrong.forEach(function(i){delete s.link[i];});s.pickL=null;}
+  s.wrong=[];renderStage();}
+function useHint(){
+  var s=P.t,me=P;if(s.hinted||P.busy)return;P.busy=true;renderStage();
+  Bank.hint(P.play,P.i).then(function(res){if(P!==me)return;P.busy=false;if(res.ok){s.removed=res.remove;s.hinted=true;if(s.sel!==null&&s.removed.indexOf(s.sel)>=0)s.sel=null;}renderStage();},function(){if(P===me){P.busy=false;renderStage();}});
+}
+function nextTask(){if(P.i<4){P.i++;startTask();renderStage();el('play').scrollTop=0;}else stageResult();}
+function stageResult(){
+  var avg=Math.round(P.results.reduce(function(a,r){return a+r.score;},0)/5),st=starsPct(avg),bonus=st>=1?20:0;
+  P.xp+=bonus;S.xp+=P.xp;P.res={avg:avg,st:st,first:award(P.node,st,50,avg)};renderStageResult();
+}
+function renderStageResult(){
+  var avg=P.res.avg,st=P.res.st,first=P.res.first;
+  var h='<div class="card center"><div class="eyebrow">'+esc(P.node.id+' · '+tx(P.node.name))+'</div><h1>'+(st?L('Qua chặng!','Stage cleared!'):L('Chưa qua chặng','Not cleared yet'))+'</h1>'+starRow(st)+
+    (st?'':'<p class="muted">'+L('Cần ít nhất 60%. Chơi lại để có bộ câu hỏi mới.','You need at least 60%. Replay for a fresh set of questions.')+'</p>')+
+    '<div class="kpis"><div class="kpi"><span>'+L('Điểm','Score')+'</span><b>'+avg+'%</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(first?'+50k':'—')+'</b></div></div><div class="rows">';
+  P.results.forEach(function(r,i){h+='<div class="rowline"><span>'+(i+1)+' · '+taskTag(P.tasks[i])+'</span><b>'+r.score+'% · +'+r.xp+' XP</b></div>';});
+  el('play-body').innerHTML=h+'</div></div>';playHud();
+  el('play-bar').innerHTML='<button class="btn ghost" data-act="replay">'+L('Chơi lại','Replay')+'</button><button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>';
+}
+
+/* ---------- boss ---------- */
+var timerH=null;
+function stopTimer(){if(timerH){clearInterval(timerH);timerH=null;}}
+function startBoss(node,useTicket){
+  var lives=3;if(useTicket&&S.inv.retry>0){S.inv.retry--;lives=4;persist();}
+  P={node:node,kind:'boss',qs:null,i:0,lives:lives,right:0,xp:0,pick:null,left:45,busy:false};
+  openPlay();playLoading(node.id+' · '+tx(node.name));
+  var me=P;Bank.boss(node.id).then(function(res){if(P!==me)return;if(!res.ok){playFail(res);return;}P.play=res.play;P.qs=res.qs;bossQ();},function(){if(P===me)playFail(netFail());});
+}
+function bossQ(){P.pick=null;P.correct=null;P.e='';P.left=45;stopTimer();
+  timerH=setInterval(function(){P.left--;var bar=el('tbar');if(bar)bar.style.width=(P.left/45*100)+'%';if(P.left<=0){stopTimer();bossAnswer(-1);}},1000);renderBoss();}
+function renderBoss(){
+  var q=P.qs[P.i],done=P.correct!==null,h='';
+  el('play-title').innerHTML=esc(P.node.id+' · '+tx(P.node.name));playHud('<span class="pill lives">'+'❤'.repeat(Math.max(0,P.lives))+'</span>');
+  h+='<div class="dots" aria-hidden="true">';P.qs.forEach(function(_,i){h+='<i class="'+(i<P.i||(i===P.i&&done)?'done':i===P.i?'cur':'')+'"></i>';});h+='</div>';
+  h+='<div class="timer" aria-hidden="true"><i id="tbar" style="width:'+(P.left/45*100)+'%"></i></div>';
+  h+='<div class="card"><span class="tag">'+L('Câu ','Question ')+(P.i+1)+'/'+P.qs.length+' · '+L('Chương ','Chapter ')+q.ch+'</span>'+viBadge()+'<h3 class="q">'+esc(q.q)+'</h3>';
+  q.opts.forEach(function(o,i){var c='';if(done){if(i===P.correct)c=' ok';else if(i===P.pick)c=' no';}else if(P.pick===i)c=' sel';
+    h+='<button class="opt'+c+'" data-act="bossans" data-i="'+i+'"'+(done||P.busy?' disabled':'')+'>'+esc(o)+'</button>';});
+  if(done){var ok=P.pick===P.correct;h+='<div class="fb '+(ok?'good':'bad')+'"><b>'+(ok?L('Chính xác! +10 XP','Correct! +10 XP'):P.pick===-1?L('Hết giờ! −1 mạng','Time is up! −1 life'):L('Sai rồi! −1 mạng','Wrong! −1 life'))+'</b>'+(P.e?esc(P.e):'')+'</div>';}
+  else if(P.err)h+='<div class="fb bad">'+P.err+'</div>';
+  h+='</div>';el('play-body').innerHTML=h;
+  el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Bỏ cuộc','Give up')+'</button>'+(done?'<button class="btn" data-act="bossnext">'+(P.lives<=0||P.i===P.qs.length-1?L('Xem kết quả','See results'):L('Câu tiếp','Next question'))+'</button>':(P.busy?'<button class="btn" disabled>'+L('Đang kiểm tra…','Checking…')+'</button>':''));
+}
+function bossAnswer(i){
+  if(P.correct!==null||P.busy)return;stopTimer();P.pick=i;P.busy=true;P.err='';renderBoss();var me=P,q=P.qs[P.i];
+  Bank.bossCheck(P.play,P.i,i).then(function(res){
+    if(P!==me)return;P.busy=false;
+    if(!res.ok){P.err=bankError(res);P.pick=null;renderBoss();return;}
+    P.correct=res.correct;P.e=res.e||'';
+    if(i===res.correct){P.right++;P.xp+=10;}else{P.lives--;if(S.review.indexOf(q.qid)<0)S.review.push(q.qid);}
+    renderBoss();
+  },function(){if(P!==me)return;P.busy=false;P.pick=null;P.err=bankError(netFail());renderBoss();});
+}
+function bossNext(){if(P.lives<=0||P.i===P.qs.length-1)bossResult();else{P.i++;bossQ();el('play').scrollTop=0;}}
+function bossResult(){
+  stopTimer();var pct=Math.round(P.right/P.qs.length*100),won=P.lives>0&&pct>=60,st=won?starsPct(pct):0;
+  if(won)P.xp+=100;S.xp+=P.xp;P.res={pct:pct,won:won,st:st,first:award(P.node,st,500,pct)};renderBossResult();
+}
+function renderBossResult(){
+  var won=P.res.won,st=P.res.st,first=P.res.first,w=WORLDS[P.node.w],nx=WORLDS[P.node.w+1];
+  var h='<div class="card center"><div class="eyebrow">'+esc(tx(P.node.name))+'</div><h1>'+(won?L('Chốt thương vụ lớn!','Big deal closed!'):L('Thương vụ thất bại','The deal fell through'))+'</h1>'+starRow(st);
+  if(won&&first)h+='<p><b>'+L('Thăng cấp: ','Promoted: ')+tx(w.rank)+'</b>'+(nx?'<br>'+L('Đường mở rộng: ','The road widens: ')+tx(nx.road)+' · '+nx.lanes+L(' làn',' lanes'):'')+'</p>';
+  if(!won)h+='<p class="muted">'+(P.lives<=0?L('Hết mạng. ','Out of lives. '):'')+L('Cần đúng ít nhất 60% và còn mạng. Mua vé đấu lại ở cửa hàng để có thêm mạng.','You need at least 60% with a life left. Buy a retry ticket in the shop for an extra life.')+'</p>';
+  h+='<div class="kpis"><div class="kpi"><span>'+L('Đúng','Correct')+'</span><b>'+P.right+'/'+P.qs.length+'</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(won&&first?'+500k':'—')+'</b></div></div></div>';
+  el('play-body').innerHTML=h;playHud();
+  el('play-bar').innerHTML='<button class="btn ghost" data-act="replay">'+L('Đánh lại','Fight again')+'</button><button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>';
+}
+function bossIntro(node){
+  P={node:node,kind:'bossintro',xp:0};openPlay();
+  el('play-title').innerHTML=esc(node.id+' · '+tx(node.name));playHud();
+  var n=node.w===6?15:12;
+  el('play-body').innerHTML='<div class="card"><span class="tag">'+L('Trùm cuối chương','Chapter boss')+'</span><h1>'+esc(tx(node.name))+'</h1><p>'+L(n+' câu trộn từ mọi chặng'+(node.w===6?' của cả 7 chương':' của chương')+'. Mỗi câu 45 giây. Bạn có 3 mạng: sai hoặc hết giờ mất 1 mạng. Đúng từ 60% và còn mạng là thắng.',
+    n+' mixed questions from '+(node.w===6?'all 7 chapters':'every stage of the chapter')+'. 45 seconds each. You have 3 lives; a wrong answer or a timeout costs one. Win with 60% correct and a life left.')+'</p><p class="muted small">'+L('Vé đấu lại trong túi: ','Retry tickets you hold: ')+S.inv.retry+'</p></div>';
+  el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button>'+(S.inv.retry>0?'<button class="btn ghost" data-act="bossgo" data-t="1">❤️ '+L('Dùng vé (+1 mạng)','Use a ticket (+1 life)')+'</button>':'')+'<button class="btn" data-act="bossgo">'+L('Bắt đầu','Start')+'</button>';
+}
+
+/* ---------- decision missions ---------- */
+function startMission(node){
+  var m=MISSIONS[node.id];
+  if(m.kind==='cafe'){openCafe();return;}
+  if(m.kind==='rounds'){P={node:node,kind:'rounds',m:m,hist:[],xp:0};openPlay();renderRounds();return;}
+  P={node:node,kind:'decide',m:m,x:m.start,tries:[],xp:0,done:false,best:bestOf(m)};openPlay();renderDecide();
+}
+function decideChart(m,tries,showBest){
+  var W=320,Hh=180,x0=46,y0=150,top=28,vals=[],b=P.best;
+  for(var x=m.min;x<=m.max;x++)vals.push(m.f(x));
+  var lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals);if(m.lower)hi=Math.min(hi,b.v*2.2);lo=Math.min(lo,0);if(hi===lo)hi=lo+1;
+  var X=function(x){return x0+(x-m.min)/(m.max-m.min)*(W-x0-10);},Y=function(v){return y0-(Math.max(lo,Math.min(hi,v))-lo)/(hi-lo)*(y0-top);};
+  var s='<svg class="chart" viewBox="0 0 '+W+' '+(Hh+10)+'" role="img" aria-label="'+tx(m.vlabel)+'">';
+  [lo,(lo+hi)/2,hi].forEach(function(v){s+='<line x1="'+x0+'" x2="'+(W-10)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(x0-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+fmt(v)+'</text>';});
+  if(lo<0)s+='<line x1="'+x0+'" x2="'+(W-10)+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="var(--muted)" stroke-dasharray="3 3"/>';
+  [m.min,Math.round((m.min+m.max)/2),m.max].forEach(function(x){s+='<text x="'+X(x)+'" y="'+(y0+16)+'" text-anchor="middle">'+x+'</text>';});
+  s+='<text x="'+(W-10)+'" y="'+(y0+32)+'" text-anchor="end">'+esc(tx(m.label))+'</text>';
+  if(showBest){var d='';for(var x2=m.min;x2<=m.max;x2++)d+=(x2===m.min?'M':'L')+X(x2).toFixed(1)+' '+Y(m.f(x2)).toFixed(1);s+='<path d="'+d+'" fill="none" stroke="var(--teal)" stroke-width="2.5"/>';
+    s+='<circle cx="'+X(b.x)+'" cy="'+Y(b.v)+'" r="6" fill="var(--teal)"/><text x="'+X(b.x)+'" y="'+(Y(b.v)-10)+'" text-anchor="middle" class="strong">'+L('Tốt nhất','Best')+' '+b.x+'</text>';}
+  tries.forEach(function(tr,i){s+='<circle cx="'+X(tr.x)+'" cy="'+Y(tr.v)+'" r="6" fill="var(--coffee)" stroke="var(--card)" stroke-width="2"/><text x="'+X(tr.x)+'" y="'+(Y(tr.v)+20)+'" text-anchor="middle">'+(i+1)+'</text>';});
+  return s+'</svg>';
+}
+function renderDecide(){
+  var m=P.m,h='',x=P.x;el('play-title').innerHTML=esc(P.node.id+' · '+tx(m.name));playHud();
+  h+='<div class="card"><span class="tag">'+L('Nhiệm vụ nhập vai','Role-play mission')+'</span><div class="scene">'+tx(m.story)+'</div>';
+  if(!P.done){
+    h+='<div class="small muted" style="font-weight:700">'+tx(m.label)+' · '+L('lần thử ','try ')+(P.tries.length+1)+'/4</div><div class="picker"><button class="step" data-act="dx" data-d="-1" aria-label="−1">−</button><div class="big" id="dv">'+x+' <small>'+tx(m.unit)+'</small></div><button class="step" data-act="dx" data-d="1" aria-label="+1">+</button></div><input type="range" id="dr" min="'+m.min+'" max="'+m.max+'" step="1" value="'+x+'" aria-label="'+esc(tx(m.label))+'">';
+  }
+  h+='</div>';
+  if(P.tries.length){h+='<div class="card">'+decideChart(m,P.tries,P.done)+'<div class="tbl-wrap"><table><thead><tr><th>#</th><th>'+esc(tx(m.label))+'</th>'+m.rows(P.tries[0].x).map(function(r){return '<th>'+esc(r[0])+'</th>';}).join('')+'<th>'+esc(tx(m.vlabel))+'</th></tr></thead><tbody>';
+    var bt=P.tries.reduce(function(a,t){return a===null||(m.lower?t.v<a.v:t.v>a.v)?t:a;},null);
+    P.tries.forEach(function(t,i){h+='<tr'+(t===bt?' class="best"':'')+'><td>'+(i+1)+'</td><td>'+t.x+'</td>'+m.rows(t.x).map(function(r){return '<td>'+r[1]+'</td>';}).join('')+'<td>'+fmt(t.v)+(m.vunit||'')+'</td></tr>';});
+    h+='</tbody></table></div></div>';}
+  if(P.done){var ratio=P.ratio,st=starsRatio(ratio);
+    h+='<div class="card center"><h1>'+(st?L('Hoàn thành nhiệm vụ!','Mission complete!'):L('Chưa đạt','Not there yet'))+'</h1>'+starRow(st)+'<div class="kpis"><div class="kpi"><span>'+L('Kết quả tốt nhất','Your best')+'</span><b>'+fmt(P.bestTry.v)+'</b></div><div class="kpi"><span>'+L('so với tối ưu','of the optimum')+'</span><b>'+Math.round(ratio*100)+'%</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div></div><p style="text-align:left;margin-top:12px">'+tx(m.why)+'</p></div>';}
+  el('play-body').innerHTML=h;
+  el('play-bar').innerHTML=P.done?'<button class="btn ghost" data-act="replay">'+L('Chơi lại','Replay')+'</button><button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>'
+    :'<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button>'+(P.tries.length?'<button class="btn ghost" data-act="dfinish">'+L('Chốt kết quả','Lock in')+'</button>':'')+'<button class="btn" data-act="dtry">'+L('Thử với ','Try ')+x+'</button>';
+}
+function dTry(){var m=P.m;P.tries.push({x:P.x,v:m.f(P.x)});if(P.tries.length>=4)dFinish();else renderDecide();}
+function dFinish(){var m=P.m,b=P.best;P.bestTry=P.tries.reduce(function(a,t){return a===null||(m.lower?t.v<a.v:t.v>a.v)?t:a;},null);
+  P.ratio=m.lower?b.v/P.bestTry.v:Math.max(0,P.bestTry.v)/b.v;var st=starsRatio(P.ratio);P.xp=st?20+st*10:5;S.xp+=P.xp;award(P.node,st,200,Math.round(P.ratio*100));P.done=true;renderDecide();el('play').scrollTop=0;}
+function renderRounds(){
+  var m=P.m,h='',tot=P.hist.reduce(function(a,r){return a+r.me;},0),done=P.hist.length>=5;
+  el('play-title').innerHTML=esc(P.node.id+' · '+tx(m.name));playHud();
+  h+='<div class="card"><span class="tag">'+L('Nhiệm vụ nhập vai','Role-play mission')+'</span><div class="scene">'+tx(m.story)+'</div>';
+  h+='<div class="tbl-wrap"><table><thead><tr><th>'+L('Tuần','Week')+'</th><th>'+L('Bạn','You')+'</th><th>'+L('Đối thủ','Rival')+'</th><th>'+L('Lãi của bạn','Your profit')+'</th></tr></thead><tbody>';
+  P.hist.forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+(r.a==='H'?L('Cao','High'):L('Thấp','Low'))+'</td><td>'+(r.b==='H'?L('Cao','High'):L('Thấp','Low'))+'</td><td>'+r.me+'</td></tr>';});
+  h+='<tr><td colspan="3"><b>'+L('Tổng','Total')+'</b></td><td><b>'+tot+'</b></td></tr></tbody></table></div></div>';
+  if(done){var ratio=tot/550,st=starsRatio(ratio);
+    h+='<div class="card center"><h1>'+L('Kết thúc 5 tuần','Five weeks done')+'</h1>'+starRow(st)+'<div class="kpis"><div class="kpi"><span>'+L('Tổng lãi','Total')+'</span><b>'+tot+'</b></div><div class="kpi"><span>'+L('so với tối đa 550','of the 550 best')+'</span><b>'+Math.round(ratio*100)+'%</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div></div><p style="text-align:left;margin-top:12px">'+
+      L('Trong một tuần đơn lẻ, giá Thấp là chiến lược trội (150 > 100, 60 > 40), nên cân bằng Nash là cả hai Thấp. Nhưng trò chơi lặp lại với đối thủ “ăn miếng trả miếng”: giữ giá Cao được 100 mỗi tuần, phá giá chỉ lãi một lần rồi bị trả đũa. Tốt nhất: Cao 4 tuần đầu, Thấp ở tuần cuối (đối thủ không còn tuần nào để trả đũa) = 550.',
+        'In a single week Low is the dominant strategy (150 > 100, 60 > 40), so the Nash equilibrium is both Low. But this game repeats against tit-for-tat: staying High earns 100 a week, while undercutting pays once and then gets punished. Best: High for four weeks, Low in the last week (the rival has no week left to retaliate) = 550.')+'</p></div>';}
+  el('play-body').innerHTML=h;
+  el('play-bar').innerHTML=done?'<button class="btn ghost" data-act="replay">'+L('Chơi lại','Replay')+'</button><button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>'
+    :'<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button><button class="btn" data-act="rnd" data-v="H">'+L('Giá Cao','High price')+'</button><button class="btn" data-act="rnd" data-v="L">'+L('Giá Thấp','Low price')+'</button>';
+}
+function playRound(a){var b=P.hist.length?P.hist[P.hist.length-1].a:'H',p=PAY[a+b];P.hist.push({a:a,b:b,me:p[0]});
+  if(P.hist.length>=5){var tot=P.hist.reduce(function(s,r){return s+r.me;},0),st=starsRatio(tot/550);P.xp=st?20+st*10:5;S.xp+=P.xp;award(P.node,st,200,Math.round(tot/550*100));}
+  renderRounds();}
+
+/* ---------- cafe (same artifact, shared storage) ---------- */
+function openCafe(){el('frame-title').textContent=tx(MISSIONS['2.5'].name);el('frame-close').textContent=L('Về con đường','Back to the road');el('frame-if').src='cafe.html';el('frame').hidden=false;document.body.classList.add('locked');}
+function closeCafe(){el('frame').hidden=true;el('frame-if').src='about:blank';document.body.classList.remove('locked');syncCafe();renderMap();}
+
+/* ================= EVENTS ================= */
+function playNode(){var nd=NODES[S.pos];if(nd.kind==='stage')startStage(nd);else if(nd.kind==='boss')bossIntro(nd);else startMission(nd);}
+document.addEventListener('click',function(e){
+  var lb=e.target.closest('[data-lang]');
+  if(lb){lang=lb.dataset.lang;try{localStorage.setItem('arena-lang',lang);}catch(_){}renderMap();
+    if(sheetMode==='talk')renderTalk();else if(sheetMode==='shop')renderShop();else if(sheetMode==='menu')renderMenu();else if(sheetMode==='board')renderBoard();
+    if(P){if(P.kind==='stage')(P.res?renderStageResult:renderStage)();else if(P.kind==='boss')(P.res?renderBossResult:renderBoss)();else if(P.kind==='decide')renderDecide();else if(P.kind==='rounds')renderRounds();else if(P.kind==='bossintro')bossIntro(P.node);else if(P.kind==='dash')renderDash();}
+    return;}
+  var npc=e.target.closest('[data-npc]');if(npc&&!walking&&!P){openNpc(+npc.dataset.npc);return;}
+  var node=e.target.closest('[data-node]');
+  if(node&&!P){var i=+node.dataset.node;if(i===S.pos)return;
+    if(S.teacher&&teacherAllowed()){S.pos=i;S.npcs=[];spawnAhead();persist();renderMap();follow(i);}
+    else toast((i<S.pos?L('Đã đi qua','Already passed'):L('Chưa mở','Locked'))+': '+NODES[i].id+' · '+tx(NODES[i].name));return;}
+  var a=e.target.closest('[data-act]');if(!a||a.disabled)return;var act=a.dataset.act;
+  switch(act){
+   case 'play':if(!walking)playNode();break;
+   case 'walk':walk();break;
+   case 'shop':shopMsg='';renderShop();openSheet('shop');break;
+   case 'menu':renderMenu();openSheet('menu');break;
+   case 'buy':buy(a.dataset.id);break;
+   case 'closesheet':closeSheet();break;
+   case 'teacher':if(teacherAllowed()){S.teacher=!S.teacher;persist();renderMenu();renderMap();}break;
+   case 'board':if(boardOpen()){if(SHEETS)sheetsBoard();else{renderBoard();openSheet('board');}}break;
+   case 'drefresh':if(SHEETS)sheetsDash();break;
+   case 'logout':logout(false);break;
+   case 'teacherboard':case 'dash':if(teacherAllowed())openDash();break;
+   case 'asstudent':if(canPreview()){asStudent=!asStudent;try{localStorage.setItem('arena-as-student',asStudent?'1':'0');}catch(_){}if(asStudent)S.teacher=false;renderMenu();renderMap();}break;
+   case 'dsel':P.sel=P.sel===a.dataset.id?null:a.dataset.id;P.confirm=null;renderDash();break;
+   case 'dreset':if(P.confirm===a.dataset.id){P.confirm=null;if(P.sel===a.dataset.id)P.sel=null;resetPlayer(a.dataset.id);}else{P.confirm=a.dataset.id;renderDash();}break;
+   case 'dresetall':if(P.confirm==='all'){P.confirm=null;P.sel=null;resetAll();}else{P.confirm='all';renderDash();}break;
+   case 'csv':if(teacherAllowed())exportCsv();break;
+   case 'reset':if(a.dataset.c){S=fresh();persist();closeSheet();renderMap();follow(0);}else{a.dataset.c='1';renderMenu(true);el('sheet').querySelector('[data-act="reset"]').dataset.c='1';}break;
+   case 'npcans':npcAnswer(+a.dataset.i);break;
+   case 'usehint':npcHint();break;
+   case 'quit':closePlay();break;
+   case 'replay':var nd=P.node;stopTimer();P=null;if(nd.kind==='stage')startStage(nd);else if(nd.kind==='boss')bossIntro(nd);else startMission(nd);break;
+   case 'mc':if(!P.busy){P.t.sel=+a.dataset.i;renderStage();}break;
+   case 'tf':P.t.ans[+a.dataset.i]=a.dataset.v==='true';renderStage();break;
+   case 'ml':P.t.pickL=P.t.pickL===+a.dataset.i?null:+a.dataset.i;renderStage();break;
+   case 'mr':if(P.t.pickL!==null){var j=+a.dataset.j;Object.keys(P.t.link).forEach(function(k){if(P.t.link[k]===j)delete P.t.link[k];});P.t.link[P.t.pickL]=j;P.t.pickL=null;renderStage();}break;
+   case 'hint':useHint();break;
+   case 'check':check();break;
+   case 'retry':retry();break;
+   case 'next':nextTask();break;
+   case 'bossgo':startBoss(P.node,!!a.dataset.t);break;
+   case 'bossans':bossAnswer(+a.dataset.i);break;
+   case 'bossnext':bossNext();break;
+   case 'dx':P.x=Math.max(P.m.min,Math.min(P.m.max,P.x+(+a.dataset.d)));renderDecide();break;
+   case 'dtry':dTry();break;
+   case 'dfinish':dFinish();break;
+   case 'rnd':playRound(a.dataset.v);break;
+   case 'closeframe':closeCafe();break;
+  }
+});
+document.addEventListener('change',function(e){if(e.target.id==='hide-me'){S.hide=e.target.checked;persist();}
+  if(e.target.id==='showboard'&&teacherAllowed()&&cloud.db)writeConfig({showBoard:e.target.checked}).then(function(){panel();});});
+document.addEventListener('input',function(e){if(e.target.id==='dr'&&P&&P.kind==='decide'){P.x=+e.target.value;el('dv').innerHTML=P.x+' <small>'+tx(P.m.unit)+'</small>';var b=el('play-bar').querySelector('[data-act="dtry"]');if(b)b.textContent=L('Thử với ','Try ')+P.x;}});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){if(sheetMode)closeSheet();}
+  if((e.key==='Enter'||e.key===' ')&&e.target.closest&&e.target.closest('[data-npc],[data-node]')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
+});
+el('ov').addEventListener('click',function(e){if(e.target===el('ov'))closeSheet();});
+window.addEventListener('pageshow',function(){syncCafe();if(!P)renderMap();});
+
+if(!S.npcs.length&&S.pos===0&&!Object.keys(S.best).length)S.npcs.push({id:S.nid++,type:'customer',t:0.6,dx:roadW(1)/2+16});
+syncCafe();renderMap();requestAnimationFrame(function(){follow(S.pos);});
+if(SHEETS){sheetsInit();el('lg-form').addEventListener('submit',function(e){e.preventDefault();doLogin();});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)sheetsHello();});}
+else initCloud();
+})();
+</script>
+
+</body></html>

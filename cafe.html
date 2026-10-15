@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Cafe Owner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: same shell as Economics Arena Stage 1.1 — one phone-width column, header strip, cards, sticky action bar. Coffee accent added for the cafe. */
+:root{
+  --bg:#eef2f1; --card:#ffffff; --ink:#14292b; --muted:#566c6e; --line:#d3dedc;
+  --teal:#0f766e; --teal-soft:#d5efeb; --gold:#e8a317; --gold-soft:#fbefcf;
+  --good:#1f8a4c; --good-soft:#d9f2e3; --bad:#c2410c; --bad-soft:#fde4d6;
+  --coffee:#7a4a2a; --coffee-soft:#f1e4d8;
+  --font:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1b1c; --card:#152a2c; --ink:#e6f1ef; --muted:#9bb3b1; --line:#27403f;
+  --teal:#3cc4b4; --teal-soft:#16413f; --gold:#f2b83a; --gold-soft:#463816;
+  --good:#52c985; --good-soft:#173d28; --bad:#f08a55; --bad-soft:#44241a;
+  --coffee:#d9a77e; --coffee-soft:#3a2a1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1b1c; --card:#152a2c; --ink:#e6f1ef; --muted:#9bb3b1; --line:#27403f;
+  --teal:#3cc4b4; --teal-soft:#16413f; --gold:#f2b83a; --gold-soft:#463816;
+  --good:#52c985; --good-soft:#173d28; --bad:#f08a55; --bad-soft:#44241a;
+  --coffee:#d9a77e; --coffee-soft:#3a2a1f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;
+  padding-block:0 104px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:560px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px}
+.brand{font-weight:800;letter-spacing:-.01em;font-size:17px}
+.brand small{display:block;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:.02em}
+.hud{display:flex;align-items:center;gap:8px}
+.pill{border:1.5px solid var(--line);background:var(--card);border-radius:99px;padding:5px 12px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill.xp{border-color:var(--gold);background:var(--gold-soft)}
+.lang{display:flex;border:1.5px solid var(--line);border-radius:99px;overflow:hidden;background:var(--card)}
+.lang button{border:0;background:none;color:var(--muted);font:700 13px var(--font);padding:6px 11px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--teal);color:#fff}
+h1{font-size:26px;line-height:1.2;margin:4px 0 8px;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:19px;line-height:1.35;margin:0 0 12px;text-wrap:balance}
+h3{font-size:16px;margin:0 0 6px}
+p{margin:0 0 10px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--coffee)}
+.stack{display:grid;gap:12px}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.tag{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:2px 9px;background:var(--coffee-soft);color:var(--coffee);margin-bottom:10px}
+.scene{background:var(--coffee-soft);border:1.5px solid var(--coffee);border-radius:16px;padding:16px}
+.scene b{color:var(--coffee)}
+.round{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.round .stars-sm{color:var(--gold);font-size:18px;letter-spacing:2px;white-space:nowrap}
+.btn{flex:1;font:700 16px var(--font);border-radius:12px;border:2px solid var(--teal);background:var(--teal);color:#fff;padding:13px 16px;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:none;color:var(--teal);flex:0 0 auto}
+.btn.inline{flex:0 0 auto;padding:9px 14px;font-size:15px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1.5px solid var(--line);
+  padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar .wrap{display:flex;gap:10px}
+/* price picker */
+.picker{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:8px 0 4px}
+.step{width:48px;height:48px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);font:800 22px var(--font);cursor:pointer}
+.price-big{text-align:center;font-size:40px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}
+.price-big small{font-size:16px;font-weight:600;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--teal)}
+.lbl{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}
+/* tables */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:15px}
+th,td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+th:first-child,td:first-child{text-align:left}
+tr.best td{font-weight:800;color:var(--good)}
+/* charts */
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--muted);font:600 11px var(--font)}
+svg.chart text.strong{fill:var(--ink);font-weight:800}
+/* quiz bits */
+.q{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.q:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.opts{display:grid;gap:8px}
+.opt{display:block;width:100%;text-align:left;font:600 15px/1.4 var(--font);color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer}
+.opt.sel{border-color:var(--teal);background:var(--teal-soft)}
+.opt.ok{border-color:var(--good);background:var(--good-soft)}
+.opt.no{border-color:var(--bad);background:var(--bad-soft)}
+.num{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.num input{width:130px;font:700 22px var(--font);color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:12px;padding:7px 12px}
+.num input.ok{border-color:var(--good)} .num input.no{border-color:var(--bad)}
+.fb{border-radius:12px;padding:12px 14px;margin-top:14px;font-size:15px}
+.fb.good{background:var(--good-soft);border:1.5px solid var(--good)}
+.fb.bad{background:var(--bad-soft);border:1.5px solid var(--bad)}
+.fb.hint{background:var(--gold-soft);border:1.5px solid var(--gold)}
+.fb b{display:block;margin-bottom:2px}
+.formula{font-variant-numeric:tabular-nums;background:var(--bg);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:14px;overflow-x:auto}
+/* customer cards */
+.cust{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.cc{border:2px solid var(--line);border-radius:12px;background:var(--card);padding:10px 6px;text-align:center;font:inherit;color:var(--ink);cursor:pointer;min-height:92px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.cc .nm{font-weight:700;font-size:14px}
+.cc .w{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.cc .hid{font-size:20px;font-weight:800;color:var(--muted)}
+.cc .st{font-size:11px;font-weight:700;color:var(--coffee);background:var(--coffee-soft);border-radius:5px;padding:0 6px;align-self:center}
+.cc.done{opacity:.35;cursor:default}
+.cc.no{border-color:var(--bad);background:var(--bad-soft)}
+.cc.buy{border-color:var(--good);background:var(--good-soft)}
+.cc.face{border-style:dashed;background:var(--coffee-soft)}
+.cc:disabled{cursor:default}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{border:1.5px solid var(--line);border-radius:12px;padding:8px;text-align:center;min-width:0}
+.kpi span{display:block;font-size:12px;color:var(--muted)}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.stars{display:flex;justify-content:center;gap:8px;margin:6px 0 10px}
+.stars svg{width:48px;height:48px}
+.stars .on{fill:var(--gold);stroke:var(--gold)} .stars .off{fill:none;stroke:var(--line)}
+.center{text-align:center}
+.badge{display:inline-block;border:1.5px solid var(--gold);background:var(--gold-soft);border-radius:99px;padding:4px 12px;font-weight:700;font-size:14px}
+.dotline{display:flex;gap:6px;margin:0 0 12px}
+.dotline i{flex:1;height:7px;border-radius:4px;background:var(--line)}
+.dotline i.done{background:var(--teal)} .dotline i.cur{background:var(--gold)}
+@media (prefers-reduced-motion:no-preference){.cc.no{animation:shake .3s}}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+</style>
+
+</head><body>
+<div class="wrap">
+  <header>
+    <div class="brand">Economics Arena<small id="crumb"></small></div>
+    <div class="hud">
+      <span class="pill xp" id="xp" aria-live="polite">0 XP</span>
+      <div class="lang" role="group" aria-label="Language / Ngôn ngữ">
+        <button data-lang="vi" aria-pressed="true">VI</button>
+        <button data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </header>
+  <main id="app"></main>
+</div>
+<div class="bar"><div class="wrap" id="actions"></div></div>
+
+<script>
+(function(){
+var lang='vi';
+try{var l=localStorage.getItem('arena-lang');if(l==='en'||l==='vi')lang=l;}catch(e){}
+
+/* ---------- economics ---------- */
+// Round 1 hidden demand (design v1): Q = 300 − 6P, P in thousand VND
+function Q(p){return Math.max(0,300-6*p);}
+function R(p){return p*Q(p);}
+var P0=35, R_BEST=R(25), GOAL=3700, PMIN=10, PMAX=45, DAYS=5;
+function midE(p1,p2){var q1=Q(p1),q2=Q(p2);return (Math.abs(q2-q1)/((q1+q2)/2))/(Math.abs(p2-p1)/((p1+p2)/2));}
+// Round 2 customers (design v1 WTP list); the three lowest are students
+var CUST=[
+ {n:'Minh',w:60},{n:'Hà',w:50},{n:'Quân',w:45},{n:'Thảo',w:40},{n:'Long',w:35},
+ {n:'Vy',w:30},{n:'Khoa',w:30},{n:'Ngân',w:25,s:1},{n:'Phúc',w:20,s:1},{n:'An',w:15,s:1}];
+function buyers(p){return CUST.filter(function(c){return c.w>=p;}).length;}
+function rev2(p){return p*buyers(p);}
+function cs(p){return CUST.reduce(function(a,c){return a+(c.w>=p?c.w-p:0);},0);}
+var R2_BEST=(function(){var b=0;for(var p=1;p<=70;p++)b=Math.max(b,rev2(p));return b;})(); // 210 at 30k
+function revDisc(m,s){var r=0;CUST.forEach(function(c){if(c.s){if(c.w>=s)r+=s;}else if(c.w>=m)r+=m;});return r;}
+var RD_BEST=(function(){var b=0;for(var m=1;m<=70;m++)for(var s=1;s<m;s++)b=Math.max(b,revDisc(m,s));return b;})(); // 255
+function starsFor(ratio){return ratio>=0.95?3:ratio>=0.85?2:ratio>=0.70?1:0;}
+
+/* ---------- text ---------- */
+var L={
+ crumb:{vi:'Mini game · Chủ quán cà phê',en:'Mini game · Cafe Owner'},
+ title:{vi:'Chủ quán cà phê',en:'Cafe Owner'},
+ eyebrow:{vi:'Nhiệm vụ 2.5 · Chương 2 Cung cầu và chính sách',en:'Mission 2.5 · Chapter 2 Supply, demand and policy'},
+ story:{vi:'Bạn vừa nhận lại một quán cà phê nhỏ gần ký túc xá ĐHQG. Quán bán <b>cà phê sữa đá 35k</b>, mỗi ngày được khoảng <b>90 ly</b>. Bạn có hai việc phải làm.',
+        en:'You have just taken over a small coffee shop near the VNU dorms. It sells <b>iced milk coffee at 35k VND</b> and sells about <b>90 cups a day</b>. You have two problems to solve.'},
+ r1:{vi:'Vòng 1 · Tăng doanh thu',en:'Round 1 · Raise the revenue'},
+ r1sub:{vi:'Độ co giãn của cầu theo giá. Thử giá trong 5 ngày, đạt 3.700k/ngày.',en:'Price elasticity of demand. Test prices over 5 days and reach 3,700k a day.'},
+ r2:{vi:'Vòng 2 · Khách sẵn lòng trả bao nhiêu?',en:'Round 2 · What will customers pay?'},
+ r2sub:{vi:'Mức sẵn lòng chi trả và thặng dư tiêu dùng. Định giá cho món cà phê muối mới.',en:'Willingness to pay and consumer surplus. Price the new salt coffee.'},
+ play:{vi:'Chơi',en:'Play'}, replay:{vi:'Chơi lại',en:'Play again'}, back:{vi:'Về quán',en:'Back to the cafe'},
+ notyet:{vi:'Chưa chơi',en:'Not played'},
+ day:{vi:'Ngày',en:'Day'}, price:{vi:'Giá',en:'Price'}, cups:{vi:'Số ly',en:'Cups'}, revenue:{vi:'Doanh thu',en:'Revenue'},
+ setPrice:{vi:'Giá bán hôm nay',en:"Today's price"},
+ open:{vi:'Mở cửa ngày',en:'Open day'},
+ same:{vi:'Hãy chọn giá khác 35k để so sánh.',en:'Pick a price other than 35k so you have something to compare.'},
+ goalLine:{vi:'Mục tiêu 3.700k',en:'Goal 3,700k'},
+ dayNote:{vi:'Ngày 1 bạn giữ giá cũ 35k. Mỗi ngày sau, bạn đặt một giá mới và xem bán được bao nhiêu ly.',en:'On day 1 you keep the old 35k price. Each day after, you set a new price and see how many cups you sell.'},
+ quizTitle:{vi:'Dừng lại tính toán',en:'Stop and work it out'},
+ quizIntro:{vi:'Bạn đã có hai ngày số liệu. Trước khi đặt giá tiếp, hãy đọc xem khách phản ứng với giá ra sao.',en:'You now have two days of data. Before you set the next price, work out how customers react to price.'},
+ qE:{vi:'1. Tính độ co giãn của cầu theo giá giữa hai mức giá (phương pháp trung điểm). Nhập giá trị tuyệt đối, làm tròn 2 chữ số.',en:'1. Compute the price elasticity of demand between the two prices (midpoint method). Enter the absolute value, rounded to 2 decimals.'},
+ qC:{vi:'2. Trong khoảng giá này, cầu là:',en:'2. In this price range, demand is:'},
+ el:{vi:'Co giãn (|E| > 1)',en:'Elastic (|E| > 1)'}, unit:{vi:'Co giãn đơn vị (|E| = 1)',en:'Unit elastic (|E| = 1)'}, inel:{vi:'Ít co giãn (|E| < 1)',en:'Inelastic (|E| < 1)'},
+ qR:{vi:'3. Vậy trong khoảng giá này, giảm giá sẽ làm doanh thu:',en:'3. So in this price range, cutting the price makes revenue:'},
+ up:{vi:'Tăng',en:'Rise'}, down:{vi:'Giảm',en:'Fall'}, flat:{vi:'Không đổi',en:'Stay the same'},
+ check:{vi:'Kiểm tra',en:'Check'}, retry:{vi:'Thử lại',en:'Try again'}, next:{vi:'Tiếp tục',en:'Next'},
+ hint:{vi:'Gợi ý (−5 XP)',en:'Hint (−5 XP)'}, hintL:{vi:'Gợi ý',en:'Hint'},
+ hintE:{vi:'E = (ΔQ ÷ Q trung bình) ÷ (ΔP ÷ P trung bình). Doanh thu tăng khi giảm giá nếu % tăng số ly lớn hơn % giảm giá.',en:'E = (ΔQ ÷ average Q) ÷ (ΔP ÷ average P). Revenue rises after a price cut if the % rise in cups is bigger than the % fall in price.'},
+ right:{vi:'Chính xác!',en:'Correct!'}, rightLate:{vi:'Đúng rồi, ở lần thử thứ hai.',en:'Right, on your second try.'},
+ wrong:{vi:'Chưa đúng. Mục sai đã được đánh dấu. Bạn được thử lại một lần.',en:'Not quite. Wrong items are marked. You can try once more.'},
+ failed:{vi:'Chưa đúng. Đáp án đúng đã được tô xanh.',en:'Not quite. The right answers are shown in green.'},
+ why:{vi:'Giải thích',en:'Why'},
+ finishEarly:{vi:'Đạt mục tiêu! Kết thúc',en:'Goal reached! Finish'},
+ seeDebrief:{vi:'Xem tổng kết',en:'See the debrief'},
+ debrief:{vi:'Tổng kết',en:'Debrief'},
+ bestDay:{vi:'Ngày tốt nhất',en:'Best day'}, ofBest:{vi:'so với mức tối đa',en:'of the best possible'},
+ reached:{vi:'Đạt mục tiêu 3.700k',en:'Goal of 3,700k reached'}, missed:{vi:'Chưa đạt mục tiêu 3.700k',en:'Goal of 3,700k not reached'},
+ curveT:{vi:'Doanh thu theo giá (đường cầu Q = 300 − 6P)',en:'Revenue at each price (demand Q = 300 − 6P)'},
+ r1why:{vi:'Ở giá 35k cầu co giãn: giảm giá 1% làm số ly tăng hơn 1%, nên doanh thu tăng khi giảm giá. Càng giảm, cầu càng ít co giãn. Tại <b>25k</b> cầu co giãn đơn vị (|E| = 1) và doanh thu đạt tối đa <b>3.750k</b> (150 ly). Dưới 25k cầu ít co giãn, giảm giá tiếp sẽ làm doanh thu giảm. Lưu ý: tối đa doanh thu chưa chắc là tối đa lợi nhuận, vì bán thêm ly cũng tốn thêm chi phí.',
+        en:'At 35k demand is elastic: a 1% price cut raises cups sold by more than 1%, so cutting the price raises revenue. The lower the price, the less elastic demand gets. At <b>25k</b> demand is unit elastic (|E| = 1) and revenue peaks at <b>3,750k</b> (150 cups). Below 25k demand is inelastic, and further cuts lower revenue. Note: maximum revenue is not necessarily maximum profit, because extra cups also cost more to make.'},
+ eHere:{vi:'|E| tại giá',en:'|E| at price'},
+ /* round 2 */
+ r2story:{vi:'Quán ra món mới: <b>cà phê muối</b>. Bạn chưa biết nên bán bao nhiêu. Hôm nay có 10 khách quen ghé. Hỏi từng người xem họ sẵn lòng trả tối đa bao nhiêu cho một ly.',
+          en:'The cafe is launching a new drink: <b>salt coffee</b>. You do not know what to charge yet. Ten regulars come in today. Ask each one the most they would pay for a cup.'},
+ ask:{vi:'Chạm vào từng khách để hỏi.',en:'Tap each customer to ask.'},
+ asked:{vi:'Đã hỏi',en:'Asked'},
+ student:{vi:'Sinh viên',en:'Student'},
+ sortT:{vi:'Xếp khách từ cao xuống thấp',en:'Line customers up, highest to lowest'},
+ sortI:{vi:'Chạm khách có mức sẵn lòng trả cao nhất trước, rồi lần lượt xuống thấp. Mỗi khách thêm một bậc vào đường cầu.',en:'Tap the customer with the highest willingness to pay first, then the next highest, and so on. Each customer adds one step to the demand curve.'},
+ mistakes:{vi:'Lần chạm sai',en:'Wrong taps'},
+ demandT:{vi:'Đường cầu bậc thang từ mức sẵn lòng trả',en:'Step demand curve built from willingness to pay'},
+ menuT:{vi:'Đặt giá trên menu',en:'Set the menu price'},
+ menuI:{vi:'Khách mua nếu mức sẵn lòng trả của họ ít nhất bằng giá. Bạn chỉ được chốt một lần, chọn giá cho doanh thu cao nhất.',en:'A customer buys if their willingness to pay is at least the price. You lock it in once, so pick the price that brings in the most revenue.'},
+ lock:{vi:'Chốt giá',en:'Lock in price'},
+ buyN:{vi:'Khách mua',en:'Buyers'},
+ csT:{vi:'Thặng dư tiêu dùng',en:'Consumer surplus'},
+ csQ:{vi:'Ở giá bạn chốt, tổng thặng dư tiêu dùng của những khách mua là bao nhiêu (nghìn đồng)?',en:'At the price you locked in, what is the total consumer surplus of the customers who buy (thousand VND)?'},
+ csHint:{vi:'Thặng dư của mỗi khách = mức sẵn lòng trả − giá. Cộng lại cho mọi khách có mua.',en:'Each buyer\'s surplus = willingness to pay − price. Add it up over everyone who buys.'},
+ discT:{vi:'Thử thách 3 sao: thẻ sinh viên',en:'3-star challenge: student card'},
+ discI:{vi:'Ngân, Phúc và An là sinh viên. Thêm một giá ưu đãi chỉ dành cho người có thẻ sinh viên, giữ nguyên giá cho khách khác. Hãy vượt mức tốt nhất khi chỉ có một giá (210k).',en:'Ngân, Phúc and An are students. Add a discount price only for student-card holders, keeping the regular price for everyone else. Beat the best you can do with one price (210k).'},
+ menuP:{vi:'Giá thường',en:'Regular price'}, studP:{vi:'Giá sinh viên',en:'Student price'},
+ tryDisc:{vi:'Mở bán với thẻ sinh viên',en:'Sell with the student card'},
+ skip:{vi:'Bỏ qua',en:'Skip'},
+ discOk:{vi:'Vượt 210k! Bạn vừa phân biệt giá.',en:'Beat 210k! You just price-discriminated.'},
+ discNo:{vi:'Chưa vượt 210k.',en:'Did not beat 210k.'},
+ discBadge:{vi:'Huy hiệu: Nhà phân biệt giá',en:'Badge: Price discriminator'},
+ r2why:{vi:'Xếp khách từ cao xuống thấp chính là vẽ đường cầu: ở mỗi mức giá, số khách mua là số người có mức sẵn lòng trả từ giá đó trở lên. Giá một mức tốt nhất là <b>30k</b>: 7 khách mua, doanh thu <b>210k</b>. Thặng dư tiêu dùng là phần chênh giữa mức sẵn lòng trả và giá, cộng lại là <b>80k</b> (vùng tô màu). Thẻ sinh viên cho phép bán thêm cho nhóm trả thấp mà không phải hạ giá cho mọi người. Đó là phân biệt giá cấp ba. Tốt nhất: giá thường 30k, giá sinh viên 15k, doanh thu 255k.',
+         en:'Lining customers up from highest to lowest draws the demand curve: at each price, the number who buy is the number whose willingness to pay is at or above it. The best single price is <b>30k</b>: 7 customers buy, revenue <b>210k</b>. Consumer surplus is each buyer\'s willingness to pay minus the price, which adds up to <b>80k</b> (the shaded area). A student card sells to the low-paying group without cutting the price for everyone. That is third-degree price discrimination. Best: regular 30k, student 15k, revenue 255k.'},
+ yourPrice:{vi:'Giá của bạn',en:'Your price'},
+ clearBonus:{vi:'Thưởng qua vòng +20 XP',en:'Round clear bonus +20 XP'},
+ stars:{vi:'sao',en:'stars'}
+};
+function t(k){return L[k][lang];}
+function k(n){return Math.round(n).toLocaleString(lang==='vi'?'vi-VN':'en-US')+'k';}
+function f2(x){return x.toLocaleString(lang==='vi'?'vi-VN':'en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function el(id){return document.getElementById(id);}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),x=a[i];a[i]=a[j];a[j]=x;}return a;}
+
+/* ---------- saved best ---------- */
+function load(){try{return JSON.parse(localStorage.getItem('arena-cafe')||'{}')||{};}catch(e){return {};}}
+function save(key,val){try{var b=load();if(key==='badge'||!(b[key]>=val)){b[key]=val;localStorage.setItem('arena-cafe',JSON.stringify(b));}}catch(e){}}
+
+/* ---------- state ---------- */
+var S={screen:'hub',xp:0};
+function newR1(){S.r1={days:[{p:P0,q:Q(P0),r:R(P0)}],price:30,phase:'day',quiz:null,warn:false};}
+function newR2(){S.r2={cards:shuffle(CUST.map(function(c,i){return {i:i,n:c.n,w:c.w,s:c.s,seen:false,sorted:false};})),
+  order:[],miss:0,lastNo:null,price:40,chosen:null,phase:'survey',cs:null,disc:{m:30,s:20,res:null}};}
+
+/* ---------- charts ---------- */
+function daysChart(days){
+  var W=320,H=190,x0=44,y0=160,top=14,max=4000,bw=Math.min(44,(W-x0-10)/DAYS-10);
+  var Y=function(v){return y0-(v/max)*(y0-top);};
+  var s='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+t('revenue')+'">';
+  [0,1000,2000,3000,4000].forEach(function(v){s+='<line x1="'+x0+'" x2="'+W+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(x0-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+(v/1000)+'tr</text>';});
+  for(var d=0;d<DAYS;d++){
+    var cx=x0+10+d*((W-x0-10)/DAYS)+bw/2,day=days[d];
+    if(day){var hit=day.r>=GOAL;s+='<rect x="'+(cx-bw/2)+'" y="'+Y(day.r)+'" width="'+bw+'" height="'+(y0-Y(day.r))+'" rx="5" fill="'+(hit?'var(--good)':'var(--coffee)')+'"/>'+
+      '<text x="'+cx+'" y="'+(Y(day.r)-5)+'" text-anchor="middle" class="strong">'+k(day.r).replace('k','')+'</text>';}
+    else s+='<rect x="'+(cx-bw/2)+'" y="'+(y0-4)+'" width="'+bw+'" height="4" rx="2" fill="var(--line)"/>';
+    s+='<text x="'+cx+'" y="'+(y0+14)+'" text-anchor="middle">'+t('day')+' '+(d+1)+'</text>';
+    if(day)s+='<text x="'+cx+'" y="'+(y0+27)+'" text-anchor="middle">'+day.p+'k</text>';
+  }
+  s+='<line x1="'+x0+'" x2="'+W+'" y1="'+Y(GOAL)+'" y2="'+Y(GOAL)+'" stroke="var(--gold)" stroke-width="2" stroke-dasharray="5 4"/>'+
+     '<text x="'+(W-2)+'" y="'+(Y(GOAL)-5)+'" text-anchor="end" style="fill:var(--gold)">'+t('goalLine')+'</text>';
+  return s+'</svg>';
+}
+function curveChart(days){
+  var W=320,H=200,x0=44,y0=164,top=14,pmin=10,pmax=45,max=4000;
+  var X=function(p){return x0+(p-pmin)/(pmax-pmin)*(W-x0-12);},Y=function(v){return y0-(v/max)*(y0-top);};
+  var s='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+t('curveT')+'">';
+  [0,1000,2000,3000,4000].forEach(function(v){s+='<line x1="'+x0+'" x2="'+(W-12)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(x0-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+(v/1000)+'tr</text>';});
+  [10,15,20,25,30,35,40,45].forEach(function(p){s+='<text x="'+X(p)+'" y="'+(y0+15)+'" text-anchor="middle">'+p+'</text>';});
+  s+='<text x="'+(W-12)+'" y="'+(y0+30)+'" text-anchor="end">'+t('price')+' (k)</text>';
+  var d='';for(var p=pmin;p<=pmax;p+=0.5)d+=(p===pmin?'M':'L')+X(p).toFixed(1)+' '+Y(R(p)).toFixed(1);
+  s+='<path d="'+d+'" fill="none" stroke="var(--teal)" stroke-width="3" stroke-linecap="round"/>';
+  s+='<line x1="'+X(25)+'" x2="'+X(25)+'" y1="'+Y(R_BEST)+'" y2="'+y0+'" stroke="var(--teal)" stroke-dasharray="3 3"/>'+
+     '<text x="'+X(25)+'" y="'+(Y(R_BEST)-8)+'" text-anchor="middle" class="strong">25k · |E| = 1</text>';
+  days.forEach(function(dy,i){s+='<circle cx="'+X(dy.p)+'" cy="'+Y(dy.r)+'" r="6" fill="var(--coffee)" stroke="var(--card)" stroke-width="2"/><text x="'+X(dy.p)+'" y="'+(Y(dy.r)+20)+'" text-anchor="middle">'+(i+1)+'</text>';});
+  return s+'</svg>';
+}
+function stepChart(sortedW,price,showCS){
+  var W=320,H=200,x0=40,y0=166,top=12,max=65,n=10;
+  var X=function(q){return x0+q/n*(W-x0-12);},Y=function(v){return y0-(v/max)*(y0-top);};
+  var s='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+t('demandT')+'">';
+  [0,15,30,45,60].forEach(function(v){s+='<line x1="'+x0+'" x2="'+(W-12)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="var(--line)"/><text x="'+(x0-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+v+'k</text>';});
+  for(var q=0;q<=n;q+=2)s+='<text x="'+X(q)+'" y="'+(y0+15)+'" text-anchor="middle">'+q+'</text>';
+  s+='<text x="'+(W-12)+'" y="'+(y0+30)+'" text-anchor="end">'+t('cups')+'</text>';
+  if(showCS&&price!=null)sortedW.forEach(function(w,i){if(w>price)s+='<rect x="'+X(i)+'" y="'+Y(w)+'" width="'+(X(i+1)-X(i))+'" height="'+(Y(price)-Y(w))+'" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1"/>';});
+  var d='';sortedW.forEach(function(w,i){d+=(i===0?'M'+X(0)+' '+Y(w):'L'+X(i)+' '+Y(w))+' L'+X(i+1)+' '+Y(w);if(i<sortedW.length-1)d+=' L'+X(i+1)+' '+Y(sortedW[i+1]);});
+  if(d)s+='<path d="'+d+'" fill="none" stroke="var(--coffee)" stroke-width="3" stroke-linejoin="round"/>';
+  if(price!=null){s+='<line x1="'+x0+'" x2="'+(W-12)+'" y1="'+Y(price)+'" y2="'+Y(price)+'" stroke="var(--teal)" stroke-width="2" stroke-dasharray="6 4"/>'+
+    '<text x="'+(W-14)+'" y="'+(Y(price)-6)+'" text-anchor="end" style="fill:var(--teal)" class="strong">P = '+price+'k</text>';}
+  return s+'</svg>';
+}
+function star(on){return '<svg viewBox="0 0 24 24" class="'+(on?'on':'off')+'" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg>';}
+function starRow(n){return '<div class="stars" role="img" aria-label="'+n+'/3 '+t('stars')+'">'+star(n>=1)+star(n>=2)+star(n>=3)+'</div>';}
+function picker(id,val,min,max){
+  return '<div class="picker"><button class="step" data-act="dec" data-id="'+id+'" aria-label="−1k">−</button>'+
+    '<div class="price-big" id="'+id+'-v">'+val+'<small>k</small></div>'+
+    '<button class="step" data-act="inc" data-id="'+id+'" aria-label="+1k">+</button></div>'+
+    '<input type="range" id="'+id+'" min="'+min+'" max="'+max+'" step="1" value="'+val+'" aria-label="'+t('price')+'">';
+}
+
+/* ---------- render ---------- */
+function render(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-lang]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});
+  el('crumb').textContent=t('crumb');el('xp').textContent=S.xp+' XP';
+  if(S.screen==='hub')hub();else if(S.screen==='r1')r1();else r2();
+}
+function hub(){
+  var b=load();
+  function st(n){return n==null?'<span class="muted small">'+t('notyet')+'</span>':'<span class="stars-sm">'+'★'.repeat(n)+'☆'.repeat(3-n)+'</span>';}
+  el('app').innerHTML='<div class="stack"><div class="card"><div class="eyebrow">'+t('eyebrow')+'</div><h1>'+t('title')+'</h1><div class="scene">'+t('story')+'</div></div>'+
+   '<div class="card round"><div><h3>'+t('r1')+'</h3><p class="muted small">'+t('r1sub')+'</p></div>'+st(b.r1)+
+   '<button class="btn" data-act="go1" style="grid-column:1/-1">'+(b.r1==null?t('play'):t('replay'))+'</button></div>'+
+   '<div class="card round"><div><h3>'+t('r2')+'</h3><p class="muted small">'+t('r2sub')+'</p>'+(b.badge?'<span class="badge">'+t('discBadge')+'</span>':'')+'</div>'+st(b.r2)+
+   '<button class="btn" data-act="go2" style="grid-column:1/-1">'+(b.r2==null?t('play'):t('replay'))+'</button></div></div>';
+  el('actions').innerHTML='';
+}
+
+/* Round 1 */
+function r1(){
+  var s=S.r1,h='<div class="stack">';
+  var dots='<div class="dotline" aria-hidden="true">';for(var i=0;i<DAYS;i++)dots+='<i class="'+(i<s.days.length?'done':i===s.days.length?'cur':'')+'"></i>';dots+='</div>';
+  if(s.phase==='day'){
+    h+='<div class="card"><span class="tag">'+t('r1')+'</span>'+dots+'<p class="muted small">'+t('dayNote')+'</p>'+daysChart(s.days)+'</div>';
+    h+='<div class="card"><div class="lbl">'+t('setPrice')+' · '+t('day')+' '+(s.days.length+1)+'/'+DAYS+'</div>'+picker('p1',s.price,PMIN,PMAX)+
+       (s.warn?'<div class="fb bad">'+t('same')+'</div>':'')+'</div>';
+    h+=dayTable(s.days)+'</div>';
+    el('app').innerHTML=h;
+    var best=Math.max.apply(null,s.days.slice(1).map(function(d){return d.r;}).concat([0]));
+    el('actions').innerHTML=(s.quiz&&best>=GOAL?'<button class="btn ghost" data-act="r1end">'+t('finishEarly')+'</button>':'')+
+      '<button class="btn" data-act="openday">'+t('open')+' '+(s.days.length+1)+'</button>';
+  }else if(s.phase==='quiz'){
+    var z=s.quiz,lock=z.status==='done';
+    h+='<div class="card"><span class="tag">'+t('quizTitle')+'</span><p class="muted">'+t('quizIntro')+'</p>'+dayTable(s.days,true)+'</div><div class="card">';
+    var ec=z.status==='answer'?'':(z.wrong.indexOf('e')<0?'ok':'no');
+    h+='<div class="q"><p><b>'+t('qE')+'</b></p><div class="num"><input id="ein" type="number" inputmode="decimal" step="any" value="'+z.e+'" class="'+ec+'"'+(lock?' disabled':'')+' aria-label="|E|">'+
+       (lock&&z.wrong.indexOf('e')>=0?'<span>'+(lang==='vi'?'Đáp án: ':'Answer: ')+'<b>'+f2(z.key.e)+'</b></span>':'')+'</div>'+
+       (lock?'<div class="formula">E = ('+Math.abs(z.key.q2-z.key.q1)+' ÷ '+((z.key.q1+z.key.q2)/2)+') ÷ ('+Math.abs(z.key.p2-z.key.p1)+' ÷ '+((z.key.p1+z.key.p2)/2)+') = '+f2(z.key.e)+'</div>':'')+'</div>';
+    h+=optQ('cls',t('qC'),[['el',t('el')],['unit',t('unit')],['in',t('inel')]],z);
+    h+=optQ('eff',t('qR'),[['up',t('up')],['flat',t('flat')],['down',t('down')]],z);
+    if(z.hinted)h+='<div class="fb hint"><b>'+t('hintL')+'</b>'+t('hintE')+'</div>';
+    if(z.status==='wrong')h+='<div class="fb bad">'+t('wrong')+'</div>';
+    if(lock)h+='<div class="fb '+(z.wrong.length?'bad':'good')+'"><b>'+(z.wrong.length?t('failed'):z.attempt===1?t('right'):t('rightLate'))+'</b>+'+z.gain+' XP<br>'+t('why')+': '+quizWhy(z.key)+'</div>';
+    h+='</div></div>';
+    el('app').innerHTML=h;
+    el('actions').innerHTML=z.status==='answer'?'<button class="btn ghost" data-act="qhint"'+(z.hinted?' disabled':'')+'>'+t('hint')+'</button><button class="btn" data-act="qcheck"'+(qReady()?'':' disabled')+'>'+t('check')+'</button>'
+      :z.status==='wrong'?'<button class="btn" data-act="qretry">'+t('retry')+'</button>'
+      :'<button class="btn" data-act="qnext">'+t('next')+'</button>';
+  }else{ // debrief
+    var bestR=Math.max.apply(null,s.days.slice(1).map(function(d){return d.r;})),ratio=bestR/R_BEST,n=starsFor(ratio);
+    h+='<div class="card center"><div class="eyebrow">'+t('r1')+' · '+t('debrief')+'</div><h1>'+(bestR>=GOAL?t('reached'):t('missed'))+'</h1>'+starRow(n)+
+      '<div class="kpis"><div class="kpi"><span>'+t('bestDay')+'</span><b>'+k(bestR)+'</b></div><div class="kpi"><span>'+t('ofBest')+'</span><b>'+Math.round(ratio*100)+'%</b></div><div class="kpi"><span>XP</span><b>'+S.xp+'</b></div></div>'+
+      (s.bonus?'<p class="muted small" style="margin-top:10px">'+t('clearBonus')+'</p>':'')+'</div>';
+    h+='<div class="card"><h3>'+t('curveT')+'</h3>'+curveChart(s.days)+'<p style="margin-top:10px">'+t('r1why')+'</p></div>';
+    h+=dayTable(s.days,false,true)+'</div>';
+    el('app').innerHTML=h;
+    el('actions').innerHTML='<button class="btn ghost" data-act="hub">'+t('back')+'</button><button class="btn" data-act="go1">'+t('replay')+'</button>';
+  }
+}
+function dayTable(days,compact,withE){
+  var best=Math.max.apply(null,days.slice(1).map(function(d){return d.r;}).concat([0]));
+  var h=(compact?'':'<div class="card">')+'<div class="tbl-wrap"><table><thead><tr><th>'+t('day')+'</th><th>'+t('price')+'</th><th>'+t('cups')+'</th><th>'+t('revenue')+'</th>'+(withE?'<th>'+t('eHere')+'</th>':'')+'</tr></thead><tbody>';
+  days.forEach(function(d,i){h+='<tr'+(withE&&i>0&&d.r===best?' class="best"':'')+'><td>'+(i+1)+'</td><td>'+d.p+'k</td><td>'+d.q+'</td><td>'+k(d.r)+'</td>'+(withE?'<td>'+f2(6*d.p/d.q)+'</td>':'')+'</tr>';});
+  return h+'</tbody></table></div>'+(compact?'':'</div>');
+}
+function optQ(name,label,opts,z){
+  var lock=z.status==='done',h='<div class="q"><p><b>'+label+'</b></p><div class="opts">';
+  opts.forEach(function(o){
+    var c='';
+    if(z.status==='answer'){if(z[name]===o[0])c=' sel';}
+    else{if(z[name]===o[0])c=z.wrong.indexOf(name)<0?' ok':' no';if(lock&&o[0]===z.key[name])c=' ok';}
+    h+='<button class="opt'+c+'" data-act="qopt" data-q="'+name+'" data-v="'+o[0]+'"'+(z.status!=='answer'?' disabled':'')+'>'+o[1]+'</button>';
+  });
+  return h+'</div></div>';
+}
+function quizKey(){
+  var d=S.r1.days,p1=d[0].p,p2=d[1].p,q1=d[0].q,q2=d[1].q,e=midE(p1,p2);
+  // revenue comparison decides both answers (exact for linear demand: arc |E|>1 ⇔ the lower price earns more)
+  var lo=p1<p2?d[0]:d[1],hi=p1<p2?d[1]:d[0],cls=lo.r>hi.r?'el':lo.r<hi.r?'in':'unit';
+  return {p1:p1,p2:p2,q1:q1,q2:q2,e:Math.round(e*100)/100,cls:cls,eff:cls==='el'?'up':cls==='in'?'down':'flat'};
+}
+function quizWhy(key){
+  var vi={el:'Số ly thay đổi theo tỷ lệ lớn hơn giá, nên cầu co giãn và giá thấp hơn mang về nhiều tiền hơn.',in:'Số ly thay đổi theo tỷ lệ nhỏ hơn giá, nên cầu ít co giãn và giảm giá làm mất doanh thu.',unit:'Số ly và giá thay đổi cùng tỷ lệ, nên doanh thu không đổi.'};
+  var en={el:'Cups changed by a larger percentage than price, so demand is elastic and the lower price brings in more money.',in:'Cups changed by a smaller percentage than price, so demand is inelastic and a price cut loses revenue.',unit:'Cups and price changed by the same percentage, so revenue stays the same.'};
+  return (lang==='vi'?vi:en)[key.cls];
+}
+function qReady(){var z=S.r1.quiz;return z.e!==''&&!isNaN(parseFloat(z.e))&&z.cls&&z.eff;}
+function qCheck(){
+  var z=S.r1.quiz,w=[];
+  if(Math.abs(Math.abs(parseFloat(z.e))-z.key.e)>0.05)w.push('e');
+  if(z.cls!==z.key.cls)w.push('cls');
+  if(z.eff!==z.key.eff)w.push('eff');
+  z.wrong=w;
+  if(w.length&&z.attempt===1){z.status='wrong';render();return;}
+  var right=3-w.length,gain=right*10+(z.attempt===1?right*5:0)-(z.hinted?5:0);
+  z.gain=Math.max(0,gain);S.xp+=z.gain;z.status='done';render();
+}
+function finishR1(){
+  var s=S.r1,bestR=Math.max.apply(null,s.days.slice(1).map(function(d){return d.r;})),n=starsFor(bestR/R_BEST);
+  s.bonus=n>=1;if(s.bonus)S.xp+=20;
+  if(bestR>=GOAL)S.xp+=10;
+  save('r1',n);s.phase='done';render();window.scrollTo(0,0);
+}
+
+/* Round 2 */
+function r2(){
+  var s=S.r2,h='<div class="stack">',sortedW=s.order.map(function(i){return CUST[i].w;});
+  if(s.phase==='survey'){
+    var seen=s.cards.filter(function(c){return c.seen;}).length;
+    h+='<div class="card"><span class="tag">'+t('r2')+'</span><div class="scene">'+t('r2story')+'</div></div>';
+    h+='<div class="card"><p class="muted small">'+t('ask')+' '+t('asked')+': <b>'+seen+'/10</b></p><div class="cust">';
+    s.cards.forEach(function(c){h+='<button class="cc'+(c.seen?'':' face')+'" data-act="ask" data-i="'+c.i+'"'+(c.seen?' disabled':'')+'><span class="nm">'+c.n+'</span>'+(c.seen?'<span class="w">'+c.w+'k</span>':'<span class="hid">?</span>')+(c.s?'<span class="st">'+t('student')+'</span>':'')+'</button>';});
+    h+='</div></div></div>';
+    el('app').innerHTML=h;
+    el('actions').innerHTML='<button class="btn" data-act="tosort"'+(seen<10?' disabled':'')+'>'+t('next')+'</button>';
+  }else if(s.phase==='sort'){
+    h+='<div class="card"><span class="tag">'+t('sortT')+'</span><p class="muted small">'+t('sortI')+'</p><div class="cust">';
+    s.cards.forEach(function(c){var done=s.order.indexOf(c.i)>=0;h+='<button class="cc'+(done?' done':'')+(s.lastNo===c.i?' no':'')+'" data-act="sortpick" data-i="'+c.i+'"'+(done?' disabled':'')+'><span class="nm">'+c.n+'</span><span class="w">'+c.w+'k</span>'+(c.s?'<span class="st">'+t('student')+'</span>':'')+'</button>';});
+    h+='</div><p class="muted small" style="margin-top:10px">'+t('mistakes')+': <b>'+s.miss+'</b></p></div>';
+    h+='<div class="card"><h3>'+t('demandT')+'</h3>'+stepChart(sortedW,null,false)+'</div></div>';
+    el('app').innerHTML=h;
+    el('actions').innerHTML='<button class="btn" data-act="toprice"'+(s.order.length<10?' disabled':'')+'>'+t('next')+'</button>';
+  }else if(s.phase==='price'){
+    h+='<div class="card"><span class="tag">'+t('menuT')+'</span><p class="muted small">'+t('menuI')+'</p>'+picker('p2',s.price,10,65)+'</div>';
+    h+='<div class="card" id="p2live">'+p2Live()+'</div></div>';
+    el('app').innerHTML=h;
+    el('actions').innerHTML='<button class="btn" data-act="lock">'+t('lock')+' '+s.price+'k</button>';
+  }else if(s.phase==='cs'){
+    var z=s.cs,p=s.chosen,lock=z.status==='done',ic=z.status==='answer'?'':(z.ok?'ok':'no');
+    h+='<div class="card"><span class="tag">'+t('csT')+'</span><div class="kpis"><div class="kpi"><span>'+t('yourPrice')+'</span><b>'+p+'k</b></div><div class="kpi"><span>'+t('buyN')+'</span><b>'+buyers(p)+'</b></div><div class="kpi"><span>'+t('revenue')+'</span><b>'+k(rev2(p))+'</b></div></div></div>';
+    h+='<div class="card">'+stepChart(sortedW,p,lock)+'<p style="margin-top:10px"><b>'+t('csQ')+'</b></p><div class="num"><input id="csin" type="number" inputmode="decimal" step="any" value="'+z.val+'" class="'+ic+'"'+(lock?' disabled':'')+' aria-label="'+t('csT')+'"><span class="muted">k</span></div>';
+    if(z.hinted)h+='<div class="fb hint"><b>'+t('hintL')+'</b>'+t('csHint')+'</div>';
+    if(z.status==='wrong')h+='<div class="fb bad">'+t('wrong')+'</div>';
+    if(lock){var parts=CUST.filter(function(c){return c.w>=p;}).map(function(c){return '('+c.w+' − '+p+')';});
+      h+='<div class="fb '+(z.ok?'good':'bad')+'"><b>'+(z.ok?(z.attempt===1?t('right'):t('rightLate')):t('failed'))+'</b>+'+z.gain+' XP<div class="formula">CS = '+(parts.join(' + ')||'0')+' = '+cs(p)+'k</div></div>';}
+    h+='</div></div>';
+    el('app').innerHTML=h;
+    el('actions').innerHTML=z.status==='answer'?'<button class="btn ghost" data-act="cshint"'+(z.hinted?' disabled':'')+'>'+t('hint')+'</button><button class="btn" data-act="cscheck"'+(z.val!==''&&!isNaN(parseFloat(z.val))?'':' disabled')+'>'+t('check')+'</button>'
+      :z.status==='wrong'?'<button class="btn" data-act="csretry">'+t('retry')+'</button>':'<button class="btn" data-act="todisc">'+t('next')+'</button>';
+  }else if(s.phase==='disc'){
+    var dd=s.disc;
+    h+='<div class="card"><span class="tag">'+t('discT')+'</span><p class="muted small">'+t('discI')+'</p>'+
+      '<div class="lbl">'+t('menuP')+'</div>'+picker('pm',dd.m,10,65)+'<div class="lbl" style="margin-top:12px">'+t('studP')+'</div>'+picker('ps',dd.s,5,64)+'</div>';
+    if(dd.res!=null){var ok=dd.res>R2_BEST;h+='<div class="card"><div class="fb '+(ok?'good':'bad')+'" style="margin-top:0"><b>'+(ok?t('discOk'):t('discNo'))+'</b>'+t('revenue')+': '+k(dd.res)+(ok?' · +30 XP':'')+'</div></div>';}
+    h+='</div>';
+    el('app').innerHTML=h;
+    el('actions').innerHTML=dd.res==null?'<button class="btn ghost" data-act="discskip">'+t('skip')+'</button><button class="btn" data-act="disctry">'+t('tryDisc')+'</button>'
+      :'<button class="btn" data-act="r2end">'+t('seeDebrief')+'</button>';
+  }else{ // debrief
+    var p=s.chosen,ratio=rev2(p)/R2_BEST,n=starsFor(ratio);
+    h+='<div class="card center"><div class="eyebrow">'+t('r2')+' · '+t('debrief')+'</div><h1>'+t('revenue')+' '+k(rev2(p))+'</h1>'+starRow(n)+
+      '<div class="kpis"><div class="kpi"><span>'+t('yourPrice')+'</span><b>'+p+'k</b></div><div class="kpi"><span>'+t('ofBest')+'</span><b>'+Math.round(ratio*100)+'%</b></div><div class="kpi"><span>XP</span><b>'+S.xp+'</b></div></div>'+
+      (s.discWin?'<p style="margin-top:12px"><span class="badge">'+t('discBadge')+'</span></p>':'')+(s.bonus?'<p class="muted small" style="margin-top:10px">'+t('clearBonus')+'</p>':'')+'</div>';
+    h+='<div class="card"><h3>'+t('csT')+' · 30k</h3>'+stepChart(sortedW,30,true)+'<p style="margin-top:10px">'+t('r2why')+'</p></div></div>';
+    el('app').innerHTML=h;
+    el('actions').innerHTML='<button class="btn ghost" data-act="hub">'+t('back')+'</button><button class="btn" data-act="go2">'+t('replay')+'</button>';
+  }
+}
+function p2Live(){
+  var s=S.r2,sortedW=s.order.map(function(i){return CUST[i].w;}),h=stepChart(sortedW,s.price,false)+'<div class="cust" style="margin-top:10px">';
+  s.order.forEach(function(i){var c=CUST[i];h+='<div class="cc'+(c.w>=s.price?' buy':'')+'" style="cursor:default"><span class="nm">'+c.n+'</span><span class="w">'+c.w+'k</span></div>';});
+  return h+'</div><p style="margin-top:10px"><b>'+t('buyN')+': '+buyers(s.price)+'/10</b></p>';
+}
+function finishR2(){
+  var s=S.r2,n=starsFor(rev2(s.chosen)/R2_BEST);
+  s.bonus=n>=1;if(s.bonus)S.xp+=20;
+  save('r2',n);if(s.discWin)save('badge',true);
+  s.phase='done';render();window.scrollTo(0,0);
+}
+
+/* ---------- price pickers ---------- */
+function setPick(id,v){
+  var s=S.r1,r=S.r2;
+  if(id==='p1'){v=Math.max(PMIN,Math.min(PMAX,v));s.price=v;s.warn=false;}
+  else if(id==='p2'){v=Math.max(10,Math.min(65,v));r.price=v;}
+  else if(id==='pm'){v=Math.max(10,Math.min(65,v));r.disc.m=v;if(r.disc.s>=v)r.disc.s=v-1;}
+  else if(id==='ps'){v=Math.max(5,Math.min(r.disc.m-1,v));r.disc.s=v;}
+  return v;
+}
+function livePick(id){ // update without full re-render so the slider keeps focus while dragging
+  if(id==='p1'){el('p1-v').innerHTML=S.r1.price+'<small>k</small>';el('p1').value=S.r1.price;}
+  else if(id==='p2'){el('p2-v').innerHTML=S.r2.price+'<small>k</small>';el('p2').value=S.r2.price;el('p2live').innerHTML=p2Live();var lb=document.querySelector('[data-act="lock"]');if(lb)lb.textContent=t('lock')+' '+S.r2.price+'k';}
+  else{el('pm-v').innerHTML=S.r2.disc.m+'<small>k</small>';el('pm').value=S.r2.disc.m;el('ps-v').innerHTML=S.r2.disc.s+'<small>k</small>';el('ps').value=S.r2.disc.s;}
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',function(e){
+  var lb=e.target.closest('[data-lang]');
+  if(lb){lang=lb.dataset.lang;try{localStorage.setItem('arena-lang',lang);}catch(_){}render();return;}
+  var n=e.target.closest('[data-act]');if(!n||n.disabled)return;
+  var a=n.dataset.act,s1=S.r1,s2=S.r2;
+  if(a==='hub'){S.screen='hub';render();}
+  else if(a==='go1'){S.xp=0;newR1();S.screen='r1';render();window.scrollTo(0,0);}
+  else if(a==='go2'){S.xp=0;newR2();S.screen='r2';render();window.scrollTo(0,0);}
+  else if(a==='dec'||a==='inc'){var id=n.dataset.id,cur=id==='p1'?s1.price:id==='p2'?s2.price:id==='pm'?s2.disc.m:s2.disc.s;setPick(id,cur+(a==='inc'?1:-1));livePick(id);}
+  else if(a==='openday'){
+    if(s1.days.length===1&&s1.price===P0){s1.warn=true;render();return;}
+    s1.days.push({p:s1.price,q:Q(s1.price),r:R(s1.price)});
+    if(s1.days.length===2){s1.quiz={e:'',cls:null,eff:null,attempt:1,status:'answer',wrong:[],hinted:false,key:quizKey()};s1.phase='quiz';render();window.scrollTo(0,0);}
+    else if(s1.days.length>=DAYS)finishR1();
+    else render();
+  }
+  else if(a==='r1end')finishR1();
+  else if(a==='qopt'){s1.quiz[n.dataset.q]=n.dataset.v;render();}
+  else if(a==='qhint'){s1.quiz.hinted=true;render();}
+  else if(a==='qcheck')qCheck();
+  else if(a==='qretry'){var z=s1.quiz;z.attempt=2;z.status='answer';if(z.wrong.indexOf('e')>=0)z.e='';if(z.wrong.indexOf('cls')>=0)z.cls=null;if(z.wrong.indexOf('eff')>=0)z.eff=null;z.wrong=[];render();}
+  else if(a==='qnext'){s1.phase='day';render();window.scrollTo(0,0);}
+  else if(a==='ask'){s2.cards.forEach(function(c){if(c.i===+n.dataset.i)c.seen=true;});render();}
+  else if(a==='tosort'){s2.phase='sort';render();window.scrollTo(0,0);}
+  else if(a==='sortpick'){
+    var i=+n.dataset.i,left=s2.cards.filter(function(c){return s2.order.indexOf(c.i)<0;}),top=Math.max.apply(null,left.map(function(c){return c.w;}));
+    if(CUST[i].w===top){s2.order.push(i);s2.lastNo=null;if(s2.order.length===10){var g=10+(s2.miss===0?5:0);S.xp+=g;}}
+    else{s2.miss++;s2.lastNo=i;}
+    render();
+  }
+  else if(a==='toprice'){s2.phase='price';render();window.scrollTo(0,0);}
+  else if(a==='lock'){s2.chosen=s2.price;s2.cs={val:'',attempt:1,status:'answer',hinted:false,ok:false,gain:0};s2.phase='cs';render();window.scrollTo(0,0);}
+  else if(a==='cshint'){s2.cs.hinted=true;render();}
+  else if(a==='cscheck'){
+    var z2=s2.cs;z2.ok=Math.abs(parseFloat(z2.val)-cs(s2.chosen))<=0.5;
+    if(!z2.ok&&z2.attempt===1){z2.status='wrong';render();return;}
+    z2.gain=Math.max(0,(z2.ok?10+(z2.attempt===1?5:0):0)-(z2.hinted?5:0));S.xp+=z2.gain;z2.status='done';render();
+  }
+  else if(a==='csretry'){s2.cs.attempt=2;s2.cs.status='answer';s2.cs.val='';render();}
+  else if(a==='todisc'){s2.phase='disc';render();window.scrollTo(0,0);}
+  else if(a==='disctry'){s2.disc.res=revDisc(s2.disc.m,s2.disc.s);s2.discWin=s2.disc.res>R2_BEST;if(s2.discWin)S.xp+=30;render();}
+  else if(a==='discskip'||a==='r2end')finishR2();
+});
+document.addEventListener('input',function(e){
+  var id=e.target.id;
+  if(id==='p1'||id==='p2'||id==='pm'||id==='ps'){setPick(id,+e.target.value);livePick(id);}
+  else if(id==='ein'){S.r1.quiz.e=e.target.value;var b=document.querySelector('[data-act="qcheck"]');if(b)b.disabled=!qReady();}
+  else if(id==='csin'){S.r2.cs.val=e.target.value;var c=document.querySelector('[data-act="cscheck"]');if(c)c.disabled=isNaN(parseFloat(e.target.value));}
+});
+// self-check of the design numbers (console only)
+console.log('[cafe] R(25)='+R_BEST+' E(35,30)='+midE(35,30).toFixed(2)+' R2best='+R2_BEST+' CS(30)='+cs(30)+' discBest='+RD_BEST);
+render();
+})();
+</script>
+
+</body></html>
