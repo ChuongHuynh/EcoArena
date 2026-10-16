@@ -9,7 +9,7 @@
 <script>window.ARENA_RELEASE=true;</script>
 <style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head><body>
-<title>Economics Arena</title>
+<title>Economics Arena 3</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -152,6 +152,23 @@ svg.chart{width:100%;height:auto;display:block} svg.chart text{fill:var(--muted)
 .lg-card input{font:600 17px var(--font);color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:11px 12px;width:100%}
 .lg-card input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 .lg-card .btn{margin-top:8px}
+/* Version 3: battle map */
+.hexwrap{background:var(--ground-a);padding:4px}
+svg.hexmap{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
+svg.hexmap .hex{cursor:pointer} svg.hexmap .hex.locked{opacity:.45}
+svg.hexmap .hex:focus-visible path{stroke:var(--gold);stroke-width:4}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 2px 0;color:var(--muted)}
+.tabs{display:flex;gap:6px;margin:4px 0 8px} .tabs button{flex:1;font:700 14px var(--font);border:1.5px solid var(--line);background:var(--card);color:var(--muted);border-radius:10px;padding:8px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.mini{padding:3px 9px;font-size:13px;border-width:1.5px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:8px} .form label{display:grid;gap:4px;font-size:13px;font-weight:700;color:var(--muted)}
+.form select{font:600 15px var(--font);color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:8px}
+.evbanner{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--gold-soft);border:1.5px solid var(--gold);border-radius:12px;padding:8px 10px;margin:0 0 8px;font-size:14px;font-weight:600}
+.evbanner .btn{flex:0 0 auto;padding:7px 12px;font-size:14px}
+.rowline.me{font-weight:800;color:var(--good)}
+td.who-cell{white-space:nowrap;line-height:1.25} .card td,.card th{padding:6px 4px} .arcard{padding:14px}
+@media (max-width:370px){.arcard{padding:10px} .arcard td,.arcard th{padding:5px 2px} td.who-cell .nm{max-width:5.6em} .btn.mini{padding:3px 6px}} td.who-cell .nm{display:inline-block;max-width:8em;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom} .lv{font-size:11px;color:var(--gold);font-weight:800}
 </style>
 
 <div class="wrap">
@@ -177,6 +194,7 @@ svg.chart{width:100%;height:auto;display:block} svg.chart text{fill:var(--muted)
 <div class="toast" id="toast" hidden></div>
 
 <script src="config.js" charset="utf-8"></script>
+<script src="market.js" charset="utf-8"></script>
 <script>
 (function(){
 var B=window.ARENA_BANK;
@@ -288,16 +306,20 @@ var NPC={
 var SHOP=[
  {id:'hint',kind:'use',face:'💡',price:100,rank:-1,name:V('Thẻ gợi ý','Hint card'),d:V('Loại một đáp án sai khi trả lời NPC.','Removes one wrong answer in an NPC challenge.')},
  {id:'retry',kind:'use',face:'❤️',price:500,rank:-1,name:V('Vé đấu lại trùm','Boss retry ticket'),d:V('Thêm một mạng khi đánh trùm.','One extra life against a boss.')},
- {id:'sign',kind:'up',face:'🪧',price:300,rank:-1,name:V('Biển hiệu mới','New shop sign'),d:V('Khách nhận ra xe đẩy của bạn từ xa.','Customers spot your cart from afar.')},
- {id:'espresso',kind:'up',face:'☕',price:800,rank:0,name:V('Máy pha espresso','Espresso machine'),d:V('Cần qua trùm Thế giới 1.','Needs the World 1 boss beaten.')},
- {id:'scooter',kind:'up',face:'🛵',price:1500,rank:1,name:V('Xe máy giao hàng','Delivery scooter'),d:V('Cần hạng Quán cà phê.','Needs Cafe rank.')},
- {id:'van',kind:'up',face:'🚐',price:3000,rank:3,name:V('Xe tải nhỏ','Small van'),d:V('Cần hạng Xưởng rang.','Needs Roastery rank.')},
- {id:'solar',kind:'up',face:'☀️',price:5000,rank:5,name:V('Pin mặt trời cho xưởng','Solar panels'),d:V('Cần hạng Thương hiệu dẫn đầu.','Needs Market leader rank.')}
+ {id:'sign',kind:'up',face:'🪧',price:300,rank:-1,name:V('Biển hiệu mới','New shop sign'),d:V('Thêm khách: thêm 1 NPC trên đường và NPC xuất hiện thường hơn. Bản đồ thi đấu: thương hiệu khởi điểm ★2.','More customers: one more NPC on the road, and NPCs appear more often. Battle map: your brand starts at ★2.')},
+ {id:'espresso',kind:'up',face:'☕',price:800,rank:0,name:V('Máy pha espresso','Espresso machine'),d:V('+10% XP ở mọi chặng và nhiệm vụ. Cần qua trùm Chương 1.','+10% XP on every stage and mission. Needs the Chapter 1 boss beaten.')},
+ {id:'scooter',kind:'up',face:'🛵',price:1500,rank:1,name:V('Xe máy giao hàng','Delivery scooter'),d:V('Mỗi deal với NPC được thêm 50% vốn. Cần hạng Quán cà phê.','Every NPC deal pays 50% more capital. Needs Cafe rank.')},
+ {id:'van',kind:'up',face:'🚐',price:3000,rank:3,name:V('Xe tải nhỏ','Small van'),d:V('Đánh trùm: mỗi câu thêm 10 giây (55 thay vì 45). Cần hạng Xưởng rang.','Boss fights: 10 more seconds per question (55 instead of 45). Needs Roastery rank.')},
+ {id:'solar',kind:'up',face:'☀️',price:5000,rank:5,name:V('Pin mặt trời cho xưởng','Solar panels'),d:V('+25% vốn khi qua mốc lần đầu. Bản đồ thi đấu: chi phí biên giảm 1 ở mọi quận. Cần hạng Thương hiệu dẫn đầu.','+25% capital for clearing a stop the first time. Battle map: marginal cost 1 lower in every district. Needs Market leader rank.')}
 ];
+function has(id){return S.owned.indexOf(id)>=0;}
+function xpBoost(x){return has('espresso')?Math.round(x*1.1):x;}
+function bossSec(){return has('van')?55:45;}
+function npcCap(T){return has('scooter')?Math.round(T.cap*1.5):T.cap;}
 
 /* ================= STATE ================= */
 var KEY='arena-v1',SEATS=20,S;
-function fresh(){return {pos:0,best:{},xp:0,cap:500,inv:{hint:0,retry:0},owned:[],review:[],seen:[],npcs:[],nid:1,teacher:false,att:{},hist:[],updated:0,hide:false,epoch:0,resetSeen:0};}
+function fresh(){return {pos:0,best:{},xp:0,cap:500,inv:{hint:0,retry:0},owned:[],review:[],seen:[],npcs:[],nid:1,teacher:false,att:{},hist:[],updated:0,hide:false,epoch:0,resetSeen:0,badges:[],evDone:{}};}
 function normalize(x){var f=fresh();if(!x||typeof x!=='object'||typeof x.pos!=='number'||x.pos>=N||x.pos<0)return f;
   Object.keys(f).forEach(function(k){if(x[k]===undefined||x[k]===null)x[k]=f[k];});if(!x.inv.hint)x.inv.hint=x.inv.hint||0;if(!x.inv.retry)x.inv.retry=x.inv.retry||0;return x;}
 try{S=normalize(JSON.parse(localStorage.getItem(KEY)||'null'));}catch(e){S=fresh();}
@@ -337,7 +359,7 @@ function initCloud(){
     var db=r[0],user=r[1];cloud.user=user;if(!user){hud();return;}
     return Promise.all([user.isOwner(),user.id()]).then(function(v){
       cloud.owner=v[0];cloud.uid=v[1];if(!db||!cloud.uid){hud();panel();return;}
-      cloud.db=db;cloud.ref=db.doc('players/'+cloud.uid);
+      cloud.db=db;cloud.ref=db.doc('players/'+cloud.uid);EVDB=db;arSubscribe(db);
       db.collection('players').onSnapshot(function(snap){cloud.players=snap.docs.map(function(d){var x=d.data()||{};return {id:d.id,xp:x.xp||0,stars:x.stars||0,cleared:x.cleared||0,pos:x.pos||0,rank:x.rank,updated:x.updated||0,hide:!!x.hide,teacher:!!x.teacher,test:!!x.test,label:typeof x.label==='string'?x.label:'',missed:x.missed||[],att:(x.state&&x.state.att)||{},hist:(x.state&&x.state.hist)||[],best:(x.state&&x.state.best)||{}};});
         if(sheetMode==='board')renderBoard();if(P&&P.kind==='dash')renderDash();hud();},function(){});
       db.collection('board').onSnapshot(function(snap){cloud.board=snap.docs.map(function(d){var x=d.data()||{};return {id:d.id,xp:x.xp||0,stars:x.stars||0,cleared:x.cleared||0,hide:!!x.hide,teacher:!!x.teacher,test:!!x.test,label:typeof x.label==='string'?x.label:''};});
@@ -451,7 +473,7 @@ function saveSess(){try{localStorage.setItem('arena-session',JSON.stringify(sess
 function takeWt(res){if(sess&&res&&res.wt&&res.wt!==sess.wt){sess.wt=res.wt;saveSess();}}
 function api(action,data){return fetch(API,{method:'POST',body:JSON.stringify(Object.assign({action:action,token:sess&&sess.token},data||{}))}).then(function(r){return r.json();});}
 function sheetsStart(res){
-  takeWt(res);cloud.owner=sess.role==='teacher';cloud.uid=sess.id;cloud.db={sheets:true};cloud.bankInfo=res.bankInfo||cloud.bankInfo||null;cloud.cfg=res.cfg||{};cloud.seats=res.seats;cloud.mode='on';cloud.nameMap[sess.id]=sess.name;
+  takeWt(res);cloud.owner=sess.role==='teacher';cloud.uid=sess.id;cloud.db={sheets:true};arWebStart();cloud.bankInfo=res.bankInfo||cloud.bankInfo||null;cloud.cfg=res.cfg||{};cloud.seats=res.seats;cloud.mode='on';cloud.nameMap[sess.id]=sess.name;
   if(S.uid&&S.uid!==sess.id)S=fresh();          // a different person's save on this device
   var st=res.state;
   if(st&&(st.updated||0)>(S.updated||0))S=normalize(st);
@@ -489,6 +511,7 @@ function doLogin(){
 }
 function logout(expired){
   sess=null;try{localStorage.removeItem('arena-session');localStorage.removeItem(KEY);}catch(e){}
+  arWebStop();
   S=fresh();cloud.mode='local';cloud.owner=false;cloud.uid=null;cloud.db=null;cloud.players=[];cloud.board=[];cloud.cfg={};
   closeSheet();if(P)closePlay();renderMap();
   showLogin(expired?L('Phiên đăng nhập đã hết hoặc mã đã đổi. Đăng nhập lại.','Your session ended or your code changed. Please sign in again.'):'');
@@ -544,6 +567,7 @@ var Bank=(function(){
       boss:function(node){var s=BankCore.boss(items,node);return done({play:put(s.key),qs:s.pub});},
       bossCheck:function(play,i,ans){return done(keys[play]&&keys[play][i]?BankCore.single(keys[play][i],ans):{error:'expired'});},
       npc:function(o){var s=BankCore.npc(items,o);return done({play:put(s.key),q:s.pub});},
+      duel:function(maxCh){var s=BankCore.duel(items,{maxCh:maxCh,n:5});return done({play:put(s.key),qs:s.pub});},
       npcHint:function(play){return done(keys[play]?BankCore.hint(keys[play],1):{error:'expired'});},
       npcCheck:function(play,ans){return done(keys[play]?BankCore.single(keys[play],ans):{error:'expired'});},
       info:function(){return {n:items.length,news:items.filter(function(q){return q.src==='v1_new';}).length,vocab:vocab.length};},
@@ -559,8 +583,10 @@ var Bank=(function(){
       check:function(play,i,ans){return use(play,i,'check',{answer:ans});},
       hint:function(play,i){return use(play,i,'hint',{});},
       boss:function(node){return start('boss',{node:node});},
-      bossCheck:function(play,i,ans){return use(play,i,'bossCheck',{answer:ans});},
+      bossCheck:function(play,i,ans){return fk[play]?use(play,i,'bossCheck',{answer:ans}):api('bossCheck',{play:play,i:i,answer:ans});},   // not ours = a duel the Sheet dealt
       npc:function(o){return start('npc',o,true);},
+      // a Worker still on Release 2 has no duel → ask the Sheet instead
+      duel:function(maxCh){return start('duel',{maxCh:maxCh}).then(function(res){return res.error==='bad_request'?api('duel',{maxCh:maxCh}):res;});},
       npcHint:function(play){return use(play,0,'npcHint',{});},
       npcCheck:function(play,ans){return use(play,0,'npcCheck',{answer:ans});},
       info:function(){return cloud.bankInfo||null;},
@@ -573,6 +599,7 @@ var Bank=(function(){
     boss:function(node){return api('boss',{node:node});},
     bossCheck:function(play,i,ans){return api('bossCheck',{play:play,i:i,answer:ans});},
     npc:function(o){return api('npc',o);},
+    duel:function(maxCh){return api('duel',{maxCh:maxCh});},
     npcHint:function(play){return api('npcHint',{play:play});},
     npcCheck:function(play,ans){return api('npcCheck',{play:play,answer:ans});},
     info:function(){return cloud.bankInfo||null;},
@@ -695,7 +722,7 @@ function hud(){
   document.documentElement.lang=lang;
   document.querySelectorAll('[data-lang]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});
   var w=WORLDS[worldNow()],r=rankIndex();
-  el('crumb').textContent=L('Vi mô · Phiên bản 2','Micro · Version 2')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
+  el('crumb').textContent=L('Vi mô · Phiên bản 3','Micro · Version 3')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
   el('rank').textContent=r<0?L('Khởi nghiệp','Starting out'):tx(WORLDS[r].rank);
   el('xp').textContent=S.xp+' XP';el('cap').textContent=L('Vốn ','Capital ')+fmt(S.cap)+'k';
   el('road-pill').textContent=tx(w.road)+' · '+S.npcs.length+' NPC';
@@ -704,10 +731,11 @@ function hud(){
 function panel(){
   var nd=NODES[S.pos],done=cleared(nd.id),h='';
   var kind=nd.kind==='boss'?L('Trùm cuối chương','Chapter boss'):nd.kind==='mission'?L('Nhiệm vụ nhập vai','Role-play mission'):L('Chặng','Stage');
+  h+=arBanner();
   h+='<div class="eyebrow">'+L('Chương ','Chapter ')+(nd.w+1)+' · '+kind+' '+nd.id+(done?' · '+'★'.repeat(S.best[nd.id]):'')+'</div><h2>'+esc(tx(nd.name))+'</h2><div class="acts">';
   h+='<button class="btn" data-act="play">'+(done?L('Chơi lại','Replay'):L('Chơi','Play'))+'</button>';
   if(done&&S.pos<N-1)h+='<button class="btn" data-act="walk">'+L('Đi tiếp','Walk on')+'</button>';
-  h+='<button class="btn ghost" data-act="shop">'+L('Cửa hàng','Shop')+'</button>'+(boardOpen()?'<button class="btn ghost" data-act="board" aria-label="'+L('Bảng xếp hạng lớp','Class leaderboard')+'">🏆</button>':'')+(teacherAllowed()?'<button class="btn ghost" data-act="dash" aria-label="'+L('Bảng điều khiển lớp','Class dashboard')+'">📊</button>':'')+'<button class="btn ghost" data-act="menu" aria-label="'+L('Cài đặt','Settings')+'">⋯</button></div>';
+  h+='<button class="btn ghost" data-act="shop">'+L('Cửa hàng','Shop')+'</button><button class="btn ghost" data-act="arena" aria-label="'+L('Bản đồ thị trường TP.HCM','HCMC market map')+'">⚔️</button>'+(boardOpen()?'<button class="btn ghost" data-act="board" aria-label="'+L('Bảng xếp hạng lớp','Class leaderboard')+'">🏆</button>':'')+(teacherAllowed()?'<button class="btn ghost" data-act="dash" aria-label="'+L('Bảng điều khiển lớp','Class dashboard')+'">📊</button>':'')+'<button class="btn ghost" data-act="menu" aria-label="'+L('Cài đặt','Settings')+'">⋯</button></div>';
   if(done&&S.pos===N-1)h+='<p class="muted small" style="margin:8px 0 0">'+L('Bạn đã đi hết con đường Vi mô!','You have walked the whole Micro road!')+'</p>';
   el('panel').innerHTML=h;
 }
@@ -715,8 +743,8 @@ function renderMap(){hud();draw();panel();}
 
 /* ================= NPC spawning + talk ================= */
 function spawnAhead(){
-  var w=worldNow(),lanes=WORLDS[w].lanes,max=lanes+1,p=0.35+0.04*w;
-  for(var k=0;k<lanes;k++){
+  var w=worldNow(),lanes=WORLDS[w].lanes,max=lanes+1+(has('sign')?1:0),p=0.35+0.04*w+(has('sign')?0.15:0);
+  for(var k=0;k<lanes+(has('sign')?1:0);k++){
     if(S.npcs.length>=max)break;if(Math.random()>p)continue;
     var type,r=Math.random();
     if(S.review.length&&r<0.35)type='professor';
@@ -746,7 +774,7 @@ function renderTalk(){
   h+='<span class="tag">'+L('Chương ','Chapter ')+q.ch+'</span>'+viBadge()+'<h3 class="q">'+esc(q.q)+'</h3>';
   q.opts.forEach(function(o,i){if(i===talk.removed)return;var c='';if(done){if(i===talk.correct)c=' ok';else if(i===talk.pick)c=' no';}else if(talk.pick===i)c=' sel';
     h+='<button class="opt'+c+'" data-act="npcans" data-i="'+i+'"'+(done||talk.busy?' disabled':'')+'>'+esc(o)+'</button>';});
-  if(done){var ok=talk.pick===talk.correct;h+='<div class="fb '+(ok?'good':'bad')+'"><b>'+(ok?L('Chốt deal! ','Deal done! ')+'+'+T.cap+'k · +'+T.xp+' XP':L('Chưa đúng. Câu này sẽ quay lại với Giáo sư.','Not quite. The Professor will bring this one back.'))+'</b>'+(talk.e?esc(talk.e):'')+'</div><div class="acts"><button class="btn" data-act="closesheet">'+L('Tiếp tục đi','Keep walking')+'</button></div>';}
+  if(done){var ok=talk.pick===talk.correct;h+='<div class="fb '+(ok?'good':'bad')+'"><b>'+(ok?L('Chốt deal! ','Deal done! ')+'+'+npcCap(T)+'k'+(has('scooter')?' (🛵 +50%)':'')+' · +'+T.xp+' XP':L('Chưa đúng. Câu này sẽ quay lại với Giáo sư.','Not quite. The Professor will bring this one back.'))+'</b>'+(talk.e?esc(talk.e):'')+'</div><div class="acts"><button class="btn" data-act="closesheet">'+L('Tiếp tục đi','Keep walking')+'</button></div>';}
   else{if(talk.err)h+='<div class="fb bad">'+talk.err+'</div>';
     h+='<div class="acts">'+(S.inv.hint>0&&talk.removed===null&&!talk.busy?'<button class="btn ghost" data-act="usehint">💡 '+L('Dùng thẻ gợi ý','Use a hint card')+' ('+S.inv.hint+')</button>':'')+'<button class="btn ghost" data-act="closesheet">'+L('Để sau','Later')+'</button></div>';}
   el('sheet').innerHTML=h;
@@ -756,7 +784,7 @@ function npcAnswer(i){
   Bank.npcCheck(talk.play,i).then(function(res){
     if(talk!==me)return;talk.busy=false;if(!res.ok){talk.err=bankError(res);talk.pick=null;renderTalk();return;}
     talk.correct=res.correct;talk.e=res.e||'';if(S.seen.indexOf(q.qid)<0)S.seen.push(q.qid);if(S.seen.length>400)S.seen=S.seen.slice(-400);
-    if(i===res.correct){S.cap+=T.cap;S.xp+=T.xp;S.review=S.review.filter(function(x){return x!==q.qid;});}else if(S.review.indexOf(q.qid)<0)S.review.push(q.qid);
+    if(i===res.correct){S.cap+=npcCap(T);S.xp+=T.xp;S.review=S.review.filter(function(x){return x!==q.qid;});}else if(S.review.indexOf(q.qid)<0)S.review.push(q.qid);
     S.npcs=S.npcs.filter(function(x){return x.id!==talk.npc.id;});persist();renderTalk();hud();draw();
   },function(){if(talk!==me)return;talk.busy=false;talk.pick=null;talk.err=bankError(netFail());renderTalk();});
 }
@@ -783,7 +811,9 @@ function lookLadder(){
   var t=lookIndex(),nx=LOOKS[t+1],h='<p class="eyebrow" style="margin:12px 0 6px">'+L('Nhân vật của bạn','Your character')+'</p><div class="looknow">'+avatarBig(t,84)+'<div><b>'+tx(LOOKS[t].n)+'</b><br><span class="muted small">'+
     (nx?L('Qua trùm Chương ','Beat the Chapter ')+(t+1)+L(' để thành ',' boss to become ')+'<b>'+tx(nx.n)+'</b>.':L('Diện mạo cao nhất. Chúc mừng!','The top look. Congratulations!'))+'<br>'+L('Chấm trắng dưới chân = mốc đã qua trong chương này.','White dots under the feet = stops cleared in this chapter.')+'</span></div></div><div class="ladder">';
   LOOKS.forEach(function(k,i){h+='<div title="'+esc(tx(k.n))+'"'+(i===t?' class="on"':'')+'>'+avatarBig(i,40,i>t)+'</div>';});
-  return h+'</div>';
+  h+='</div>';
+  if(S.badges&&S.badges.length)h+='<p class="eyebrow" style="margin:12px 0 6px">'+L('Huy hiệu thi đấu','Event badges')+'</p><div class="hud" style="margin:0">'+badgeLine(S.badges)+'</div>';
+  return h;
 }
 function buy(id){var it=SHOP.filter(function(x){return x.id===id;})[0];if(!it||S.cap<it.price||it.rank>rankIndex()||(it.kind==='up'&&S.owned.indexOf(id)>=0))return;
   S.cap-=it.price;if(it.kind==='use')S.inv[id]++;else S.owned.push(id);shopMsg=L('Đã mua: ','Bought: ')+tx(it.name);persist();renderShop();hud();draw();}
@@ -827,7 +857,7 @@ function starsRatio(r){return r>=0.95?3:r>=0.85?2:r>=0.70?1:0;}
 function award(node,stars,cap,score){
   var first=!cleared(node.id);logAttempt(node.id,score,stars);
   if(stars>(S.best[node.id]||0))S.best[node.id]=stars;
-  if(stars>=1&&first){S.cap+=cap;}
+  if(stars>=1&&first){S.cap+=has('solar')?Math.round(cap*1.25):cap;}
   persist();return first&&stars>=1;
 }
 
@@ -915,14 +945,15 @@ function useHint(){
 function nextTask(){if(P.i<4){P.i++;startTask();renderStage();el('play').scrollTop=0;}else stageResult();}
 function stageResult(){
   var avg=Math.round(P.results.reduce(function(a,r){return a+r.score;},0)/5),st=starsPct(avg),bonus=st>=1?20:0;
-  P.xp+=bonus;S.xp+=P.xp;P.res={avg:avg,st:st,first:award(P.node,st,50,avg)};renderStageResult();
+  P.xp+=bonus;var raw=P.xp;P.xp=xpBoost(P.xp);P.boost=P.xp-raw;S.xp+=P.xp;P.res={avg:avg,st:st,first:award(P.node,st,50,avg)};renderStageResult();
 }
 function renderStageResult(){
   var avg=P.res.avg,st=P.res.st,first=P.res.first;
   var h='<div class="card center"><div class="eyebrow">'+esc(P.node.id+' · '+tx(P.node.name))+'</div><h1>'+(st?L('Qua chặng!','Stage cleared!'):L('Chưa qua chặng','Not cleared yet'))+'</h1>'+starRow(st)+
     (st?'':'<p class="muted">'+L('Cần ít nhất 60%. Chơi lại để có bộ câu hỏi mới.','You need at least 60%. Replay for a fresh set of questions.')+'</p>')+
-    '<div class="kpis"><div class="kpi"><span>'+L('Điểm','Score')+'</span><b>'+avg+'%</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(first?'+50k':'—')+'</b></div></div><div class="rows">';
+    '<div class="kpis"><div class="kpi"><span>'+L('Điểm','Score')+'</span><b>'+avg+'%</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(first?'+'+(has('solar')?63:50)+'k':'—')+'</b></div></div><div class="rows">';
   P.results.forEach(function(r,i){h+='<div class="rowline"><span>'+(i+1)+' · '+taskTag(P.tasks[i])+'</span><b>'+r.score+'% · +'+r.xp+' XP</b></div>';});
+  if(P.boost)h+='<div class="rowline"><span>☕ '+L('Máy pha espresso','Espresso machine')+' +10%</span><b>+'+P.boost+' XP</b></div>';
   el('play-body').innerHTML=h+'</div></div>';playHud();
   el('play-bar').innerHTML='<button class="btn ghost" data-act="replay">'+L('Chơi lại','Replay')+'</button><button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>';
 }
@@ -936,13 +967,13 @@ function startBoss(node,useTicket){
   openPlay();playLoading(node.id+' · '+tx(node.name));
   var me=P;Bank.boss(node.id).then(function(res){if(P!==me)return;if(!res.ok){playFail(res);return;}P.play=res.play;P.qs=res.qs;bossQ();},function(){if(P===me)playFail(netFail());});
 }
-function bossQ(){P.pick=null;P.correct=null;P.e='';P.left=45;stopTimer();
-  timerH=setInterval(function(){P.left--;var bar=el('tbar');if(bar)bar.style.width=(P.left/45*100)+'%';if(P.left<=0){stopTimer();bossAnswer(-1);}},1000);renderBoss();}
+function bossQ(){P.pick=null;P.correct=null;P.e='';P.left=bossSec();stopTimer();
+  timerH=setInterval(function(){P.left--;var bar=el('tbar');if(bar)bar.style.width=(P.left/bossSec()*100)+'%';if(P.left<=0){stopTimer();bossAnswer(-1);}},1000);renderBoss();}
 function renderBoss(){
   var q=P.qs[P.i],done=P.correct!==null,h='';
   el('play-title').innerHTML=esc(P.node.id+' · '+tx(P.node.name));playHud('<span class="pill lives">'+'❤'.repeat(Math.max(0,P.lives))+'</span>');
   h+='<div class="dots" aria-hidden="true">';P.qs.forEach(function(_,i){h+='<i class="'+(i<P.i||(i===P.i&&done)?'done':i===P.i?'cur':'')+'"></i>';});h+='</div>';
-  h+='<div class="timer" aria-hidden="true"><i id="tbar" style="width:'+(P.left/45*100)+'%"></i></div>';
+  h+='<div class="timer" aria-hidden="true"><i id="tbar" style="width:'+(P.left/bossSec()*100)+'%"></i></div>';
   h+='<div class="card"><span class="tag">'+L('Câu ','Question ')+(P.i+1)+'/'+P.qs.length+' · '+L('Chương ','Chapter ')+q.ch+'</span>'+viBadge()+'<h3 class="q">'+esc(q.q)+'</h3>';
   q.opts.forEach(function(o,i){var c='';if(done){if(i===P.correct)c=' ok';else if(i===P.pick)c=' no';}else if(P.pick===i)c=' sel';
     h+='<button class="opt'+c+'" data-act="bossans" data-i="'+i+'"'+(done||P.busy?' disabled':'')+'>'+esc(o)+'</button>';});
@@ -971,7 +1002,7 @@ function renderBossResult(){
   var h='<div class="card center"><div class="eyebrow">'+esc(tx(P.node.name))+'</div><h1>'+(won?L('Chốt thương vụ lớn!','Big deal closed!'):L('Thương vụ thất bại','The deal fell through'))+'</h1>'+starRow(st);
   if(won&&first)h+='<div class="promo-av">'+avatarBig(P.node.w+1,120)+'</div><p><b>'+L('Thăng cấp: ','Promoted: ')+tx(w.rank)+'</b><br>'+L('Nhân vật mới: ','New look: ')+tx(LOOKS[P.node.w+1].n)+(nx?'<br>'+L('Đường mở rộng: ','The road widens: ')+tx(nx.road)+' · '+nx.lanes+L(' làn',' lanes'):'')+'</p>';
   if(!won)h+='<p class="muted">'+(P.lives<=0?L('Hết mạng. ','Out of lives. '):'')+L('Cần đúng ít nhất 60% và còn mạng. Mua vé đấu lại ở cửa hàng để có thêm mạng.','You need at least 60% with a life left. Buy a retry ticket in the shop for an extra life.')+'</p>';
-  h+='<div class="kpis"><div class="kpi"><span>'+L('Đúng','Correct')+'</span><b>'+P.right+'/'+P.qs.length+'</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(won&&first?'+500k':'—')+'</b></div></div></div>';
+  h+='<div class="kpis"><div class="kpi"><span>'+L('Đúng','Correct')+'</span><b>'+P.right+'/'+P.qs.length+'</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(won&&first?'+'+(has('solar')?625:500)+'k':'—')+'</b></div></div></div>';
   el('play-body').innerHTML=h;playHud();
   el('play-bar').innerHTML='<button class="btn ghost" data-act="replay">'+L('Đánh lại','Fight again')+'</button><button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>';
 }
@@ -979,8 +1010,8 @@ function bossIntro(node){
   P={node:node,kind:'bossintro',xp:0};openPlay();
   el('play-title').innerHTML=esc(node.id+' · '+tx(node.name));playHud();
   var n=node.w===6?15:12;
-  el('play-body').innerHTML='<div class="card"><span class="tag">'+L('Trùm cuối chương','Chapter boss')+'</span><h1>'+esc(tx(node.name))+'</h1><p>'+L(n+' câu trộn từ mọi chặng'+(node.w===6?' của cả 7 chương':' của chương')+'. Mỗi câu 45 giây. Bạn có 3 mạng: sai hoặc hết giờ mất 1 mạng. Đúng từ 60% và còn mạng là thắng.',
-    n+' mixed questions from '+(node.w===6?'all 7 chapters':'every stage of the chapter')+'. 45 seconds each. You have 3 lives; a wrong answer or a timeout costs one. Win with 60% correct and a life left.')+'</p><p class="muted small">'+L('Vé đấu lại trong túi: ','Retry tickets you hold: ')+S.inv.retry+'</p></div>';
+  el('play-body').innerHTML='<div class="card"><span class="tag">'+L('Trùm cuối chương','Chapter boss')+'</span><h1>'+esc(tx(node.name))+'</h1><p>'+L(n+' câu trộn từ mọi chặng'+(node.w===6?' của cả 7 chương':' của chương')+'. Mỗi câu '+bossSec()+' giây'+(has('van')?' (🚐 +10 giây)':'')+'. Bạn có 3 mạng: sai hoặc hết giờ mất 1 mạng. Đúng từ 60% và còn mạng là thắng.',
+    n+' mixed questions from '+(node.w===6?'all 7 chapters':'every stage of the chapter')+'. '+bossSec()+' seconds each'+(has('van')?' (🚐 +10 s)':'')+'. You have 3 lives; a wrong answer or a timeout costs one. Win with 60% correct and a life left.')+'</p><p class="muted small">'+L('Vé đấu lại trong túi: ','Retry tickets you hold: ')+S.inv.retry+'</p></div>';
   el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button>'+(S.inv.retry>0?'<button class="btn ghost" data-act="bossgo" data-t="1">❤️ '+L('Dùng vé (+1 mạng)','Use a ticket (+1 life)')+'</button>':'')+'<button class="btn" data-act="bossgo">'+L('Bắt đầu','Start')+'</button>';
 }
 
@@ -1025,7 +1056,7 @@ function renderDecide(){
 }
 function dTry(){var m=P.m;P.tries.push({x:P.x,v:m.f(P.x)});if(P.tries.length>=4)dFinish();else renderDecide();}
 function dFinish(){var m=P.m,b=P.best;P.bestTry=P.tries.reduce(function(a,t){return a===null||(m.lower?t.v<a.v:t.v>a.v)?t:a;},null);
-  P.ratio=m.lower?b.v/P.bestTry.v:Math.max(0,P.bestTry.v)/b.v;var st=starsRatio(P.ratio);P.xp=st?20+st*10:5;S.xp+=P.xp;award(P.node,st,200,Math.round(P.ratio*100));P.done=true;renderDecide();el('play').scrollTop=0;}
+  P.ratio=m.lower?b.v/P.bestTry.v:Math.max(0,P.bestTry.v)/b.v;var st=starsRatio(P.ratio);P.xp=xpBoost(st?20+st*10:5);S.xp+=P.xp;award(P.node,st,200,Math.round(P.ratio*100));P.done=true;renderDecide();el('play').scrollTop=0;}
 function renderRounds(){
   var m=P.m,h='',tot=P.hist.reduce(function(a,r){return a+r.me;},0),done=P.hist.length>=5;
   el('play-title').innerHTML=esc(P.node.id+' · '+tx(m.name));playHud();
@@ -1042,12 +1073,371 @@ function renderRounds(){
     :'<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button><button class="btn" data-act="rnd" data-v="H">'+L('Giá Cao','High price')+'</button><button class="btn" data-act="rnd" data-v="L">'+L('Giá Thấp','Low price')+'</button>';
 }
 function playRound(a){var b=P.hist.length?P.hist[P.hist.length-1].a:'H',p=PAY[a+b];P.hist.push({a:a,b:b,me:p[0]});
-  if(P.hist.length>=5){var tot=P.hist.reduce(function(s,r){return s+r.me;},0),st=starsRatio(tot/550);P.xp=st?20+st*10:5;S.xp+=P.xp;award(P.node,st,200,Math.round(tot/550*100));}
+  if(P.hist.length>=5){var tot=P.hist.reduce(function(s,r){return s+r.me;},0),st=starsRatio(tot/550);P.xp=xpBoost(st?20+st*10:5);S.xp+=P.xp;award(P.node,st,200,Math.round(tot/550*100));}
   renderRounds();}
 
 /* ---------- cafe (same artifact, shared storage) ---------- */
 function openCafe(){el('frame-title').textContent=tx(MISSIONS['2.5'].name);el('frame-close').textContent=L('Về con đường','Back to the road');el('frame-if').src='cafe.html';el('frame').hidden=false;document.body.classList.add('locked');}
 function closeCafe(){el('frame').hidden=true;el('frame-if').src='about:blank';document.body.classList.remove('locked');syncCafe();renderMap();}
+
+/* ================= ARENA (Version 3): live market battle on the Ho Chi Minh City map =================
+   The teacher opens an event (duration, round length, solo or team, bots, open all) → event/current + event/state.
+   The teacher's page is the HOST: it reads every player's moves/<id>, clears a market round every roundSec and writes
+   event/state; players read it live. Practice: the player's own page hosts a 5-minute event against bots (no XP).
+   When an event ends the host writes the results; each player's page adds its XP bonus + badges once (S.evDone). */
+var MK=window.Market;
+var EVDB=null;   // where live-event documents live: the claude.ai db, or on the website the Worker's D1 store (WebEv); null = no live events
+var AR={cls:{cfg:null,state:null,moves:{},mine:null},prac:null,view:'class',sel:null,tab:'map',duel:null,msg:'',names:{},asked:{},lastDuel:0,seenRound:-1,seenLog:0};
+var BADGE={gold:['🏆',V('Vô địch','Champion')],silver:['🥈',V('Á quân','Runner-up')],bronze:['🥉',V('Hạng ba','Third place')],king:['👑',V('Vua quận','District king')],
+  duelist:['⚔️',V('Cao thủ thách đấu','Duel master')],team:['🤝',V('Đội vô địch','Winning team')],played:['🎟️',V('Đã tham gia','Took part')]};
+var TYPE_TXT={
+  comp:{n:V('Chợ cạnh tranh hoàn hảo','Perfectly competitive market'),ic:'⚖',
+    r:V('Mọi quán bán cùng một loại cà phê; giá do thị trường quyết định: P = 60 − b × (tổng số ly cả chợ). Bạn chọn số ly mỗi vòng. Chi phí biên MC = 10 + q. Lãi nhất khi MC = P. Thắng thách đấu: MC của bạn giảm 1.',
+        'Every shop sells the same coffee; the market sets the price: P = 60 − b × (all cups sold). You choose how many cups to sell each round. Marginal cost MC = 10 + q. Profit peaks where MC = P. Win a duel: your MC falls by 1.')},
+  mono:{n:V('Thị trường độc quyền','Monopoly market'),ic:'👑',
+    r:V('Chỉ chủ giấy phép được bán. Cầu: Q = k × (60 − P), MC = 12. Chủ giấy phép chọn giá; lãi nhất khi MR = MC. Thắng thách đấu với chủ giấy phép để giành giấy phép.',
+        'Only the licence holder may sell. Demand: Q = k × (60 − P), MC = 12. The holder picks the price; profit peaks where MR = MC. Beat the holder in a duel to take the licence.')},
+  oligo:{n:V('Độc quyền nhóm','Oligopoly'),ic:'⚔',
+    r:V('Vài quán bán cà phê hơi khác nhau. Bạn chọn giá: rẻ hơn thì đông khách hơn nhưng mỗi ly lãi ít hơn, và đối thủ phản ứng mỗi vòng. MC = 12. Thắng thách đấu: thương hiệu của bạn +1 (khách thích quán bạn hơn), đối thủ −1.',
+        'A few shops sell slightly different coffee. You choose a price: cheaper brings more customers but less profit per cup, and rivals react every round. MC = 12. Win a duel: your brand +1 (customers prefer you), the rival −1.')},
+  center:{n:V('Trung tâm: độc quyền nhóm lớn','Centre: the big oligopoly'),ic:'★',
+    r:V('Thị trường lớn nhất thành phố. Giống độc quyền nhóm, nhưng MC = 14 (mặt bằng đắt) và thương hiệu có sức nặng gần gấp đôi.',
+        'The biggest market in the city. Like an oligopoly, but MC = 14 (high rent) and brand counts almost twice as much.')}};
+function arX(){return AR.view==='practice'&&AR.prac?AR.prac:AR.cls;}
+function arMe(){return AR.view==='practice'?'me':cloud.uid;}
+function arClassLive(){var c=AR.cls.cfg;return !!(c&&c.status==='live');}
+function arHosting(){return AR.view!=='practice'&&cloud.owner&&!!EVDB&&arClassLive();}
+function arMyCh(){return S.teacher&&teacherAllowed()?7:worldNow()+1;}
+function mmss(ms){ms=Math.max(0,ms);var s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+('0'+s%60).slice(-2);}
+function arMine(){
+  var x=arX(),eid=x.cfg&&x.cfg.eid;
+  if(!x.mine||x.mine.eid!==eid){var m=null;if(x===AR.cls){try{m=JSON.parse(localStorage.getItem('arena-mine')||'null');}catch(e){}}
+    x.mine=m&&m.eid===eid?m:{eid:eid,ch:arMyCh(),act:[],dec:{},duels:[],n:0};}
+  x.mine.ch=arMyCh();x.mine.gear=S.owned.filter(function(g){return g==='sign'||g==='solar';});return x.mine;
+}
+function arSendMine(){
+  var x=arX(),m=x.mine;
+  if(x===AR.prac){x.moves.me=m;return;}
+  try{localStorage.setItem('arena-mine',JSON.stringify(m));}catch(e){}
+  if(!EVDB||!cloud.uid)return;
+  if(SHEETS&&sess)m.nm=sess.name;                  // web: classmates see this name in the ranking
+  clearTimeout(AR.mt);AR.mt=setTimeout(function(){EVDB.doc('moves/'+cloud.uid).set(JSON.parse(JSON.stringify(m))).catch(function(){toast(L('Không gửi được lựa chọn. Thử lại.','Could not send your move. Try again.'));});},350);
+}
+function arName(id){
+  if(id===arMe())return L('Bạn','You');
+  if(MK.isBot(id))return '🤖 '+MK.botName(id);
+  var b=cloud.board.filter(function(p){return p.id===id;})[0];if(b&&b.hide&&!teacherAllowed())return L('Ẩn danh','Anonymous');
+  return AR.names[id]||L('Học viên','Student');
+}
+function arAskNames(ids){
+  var need=ids.filter(function(id){return !MK.isBot(id)&&id!==arMe()&&!AR.names[id]&&!AR.asked[id];});if(!need.length)return;
+  need.forEach(function(id){AR.asked[id]=1;});
+  names(need,function(ps){var any=false;need.forEach(function(id){var n=ps[id]&&ps[id].name;if(n){AR.names[id]=n;any=true;}});if(any&&P&&P.kind==='arena'&&!AR.duel)renderArena();});
+}
+var PAL=['#2f6fd6','#2e9e5b','#8a4fd0','#d64545','#e0782d','#1c9aa6','#b5487e','#6c7a2c'];
+function arColor(id,st,cfg){
+  if(id===arMe())return 'var(--gold)';
+  if(MK.isBot(id))return '#9aa7ad';
+  if(cfg&&cfg.mode==='team'&&st.sc[id]&&st.sc[id].team>=0)return MK.TEAMS[st.sc[id].team].color;
+  var h=0;for(var i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;return PAL[h%PAL.length];
+}
+function badgeLine(list){
+  var cnt={},order=['gold','silver','bronze','team','king','duelist','played'];
+  (list||[]).forEach(function(b){var c=String(b.c||b).split(':')[0];cnt[c]=(cnt[c]||0)+1;});
+  return order.filter(function(c){return cnt[c];}).map(function(c){return '<span class="pill" title="'+esc(tx(BADGE[c][1]))+'">'+BADGE[c][0]+' '+esc(tx(BADGE[c][1]))+(cnt[c]>1?' ×'+cnt[c]:'')+'</span>';}).join(' ');
+}
+function badgeName(code){var p=String(code).split(':'),b=BADGE[p[0]];if(!b)return code;return b[0]+' '+tx(b[1])+(p[1]&&MK.BY[p[1]]?' '+(lang==='vi'?MK.BY[p[1]].vi:MK.BY[p[1]].en):'');}
+
+/* ---------- class event: open, host, end, rewards ---------- */
+function arOpenEvent(o){
+  if(!cloud.owner||!EVDB)return;
+  var now=Date.now(),cfg={eid:'e'+now,status:'live',start:now,end:now+o.min*60000,roundSec:ARTEST?ARTEST.sec:o.sec,mode:o.mode,teams:o.teams,bots:o.bots,openAll:!!o.openAll};
+  var st=MK.newEvent(cfg,now);AR.cls.cfg=cfg;AR.cls.state=st;AR.cls.moves={};AR.view='class';AR.sel=null;
+  EVDB.doc('event/state').set(JSON.parse(JSON.stringify(st))).then(function(){return EVDB.doc('event/current').set(cfg);})
+    .then(function(){toast(L('Đã mở thi đấu. Giữ trang này mở: máy của bạn tính kết quả mỗi vòng.','The event is open. Keep this page open: your device runs every round.'));},function(){toast(L('Không mở được thi đấu. Thử lại.','Could not open the event. Try again.'));});
+  renderArena();panel();
+}
+function arWriteState(){var c=AR.cls;if(!EVDB||!c.state)return;EVDB.doc('event/state').set(JSON.parse(JSON.stringify(c.state))).catch(function(){});}
+function arSetEnd(end){var c=AR.cls;if(!c.cfg)return;c.cfg=Object.assign({},c.cfg,{end:end});EVDB.doc('event/current').set(c.cfg).catch(function(){});renderArena();}
+function arEndEvent(){
+  var c=AR.cls;c.state.status='ended';var res=MK.finish(c.state,c.cfg);
+  c.cfg=Object.assign({},c.cfg,{status:'ended',ended:Date.now(),results:res});
+  EVDB.doc('event/state').set(JSON.parse(JSON.stringify(c.state))).then(function(){return EVDB.doc('event/current').set(c.cfg);}).catch(function(){});
+  toast(L('Thi đấu kết thúc. Đã trao thưởng.','The event has ended. Rewards are out.'));if(P&&P.kind==='arena')renderArena();panel();
+}
+function arHostTick(){
+  var c=AR.cls;if(!(cloud.owner&&EVDB&&c.cfg&&c.cfg.status==='live'&&c.state&&c.state.eid===c.cfg.eid))return;
+  var r=MK.tick(c.state,c.cfg,c.moves,Date.now());
+  if(r.ended){arEndEvent();return;}
+  if(r.changed){arWriteState();arStateChanged();}
+}
+function arPracTick(){
+  var p=AR.prac;if(!p||p.cfg.status!=='live')return;p.moves.me=p.mine;
+  var r=MK.tick(p.state,p.cfg,p.moves,Date.now());
+  if(r.ended){p.cfg.status='ended';p.cfg.results=MK.finish(p.state,p.cfg);}
+  if(r.changed||r.ended)arStateChanged();
+}
+function arStateChanged(){
+  var st=arX().state;if(!st)return;
+  if(P&&P.kind==='arena'&&!AR.duel&&(st.round!==AR.seenRound||st.log.length!==AR.seenLog||st.status==='ended'))renderArena();
+}
+function arApplyResults(){
+  var c=AR.cls.cfg;if(!c||c.status!=='ended'||!c.results||!cloud.uid||cloud.owner||!S.evDone||S.evDone[c.eid])return;
+  var r=c.results,x=r.xp&&r.xp[cloud.uid];S.evDone[c.eid]=1;
+  if(x===undefined){persist();return;}
+  S.xp+=x;(r.badges[cloud.uid]||[]).forEach(function(b){S.badges.push({e:c.eid,c:b,t:c.ended||Date.now()});});persist();hud();
+  var place=r.rank.map(function(p){return p.id;}).indexOf(cloud.uid)+1;
+  toast(L('Kết thúc thi đấu: hạng ','Event over: place ')+place+' · +'+x+' XP'+((r.badges[cloud.uid]||[]).length?' · '+(r.badges[cloud.uid]||[]).map(function(b){return BADGE[String(b).split(':')[0]][0];}).join(''):''));
+}
+function arSubscribe(db){
+  try{
+    db.doc('event/current').onSnapshot(function(snap){var c=snap.exists?(snap.data()||null):null;
+      if(cloud.owner&&AR.cls.cfg&&c&&c.eid===AR.cls.cfg.eid&&AR.cls.cfg.status==='ended'&&c.status==='live')return;   // our own end is still being written
+      AR.cls.cfg=c;arApplyResults();panel();if(P&&P.kind==='arena'&&!AR.duel&&AR.view!=='practice')renderArena();},function(){});
+    db.doc('event/state').onSnapshot(function(snap){var st=snap.exists?(snap.data()||null):null;if(!st)return;
+      if(cloud.owner&&AR.cls.state&&AR.cls.state.eid===st.eid)return;                                                     // the host keeps its own copy
+      AR.cls.state=st;if(AR.view!=='practice')arStateChanged();},function(){});
+    if(cloud.owner)db.collection('moves').onSnapshot(function(snap){var m={};snap.docs.forEach(function(d){m[d.id]=d.data()||{};});AR.cls.moves=m;
+      if(SHEETS){var add=false;Object.keys(m).forEach(function(id){if(m[id].nm&&AR.names[id]!==m[id].nm){AR.names[id]=String(m[id].nm).slice(0,60);add=true;}});
+        if(add)db.doc('event/names').set(AR.names).catch(function(){});}},function(){});
+    if(SHEETS)db.doc('event/names').onSnapshot(function(snap){var n=snap.exists?(snap.data()||{}):{};Object.keys(n).forEach(function(id){if(!AR.names[id])AR.names[id]=String(n[id]).slice(0,60);});},function(){});
+  }catch(e){}
+}
+
+/* ---------- website: live-event documents in the Worker's D1 store (same calls as the claude.ai db) ----------
+   One poll carries every subscribed document with the version this page has; the Worker returns only what changed.
+   Poll every 1.5 s while hosting, 2.5 s in the arena during an event, 6 s on the road during an event, 10 s otherwise. */
+function WebEv(){
+  var subs={},ver={},msubs=[],mver=0,timer=null,stopped=false,busy=false,again=false;
+  function soon(ms){if(stopped)return;if(busy){again=true;return;}clearTimeout(timer);timer=setTimeout(poll,ms);}
+  function snap(body){return {exists:body!==null&&body!==undefined,data:function(){return body;}};}
+  function delay(){var live=arClassLive();return !live?10000:arHosting()?1500:(P&&P.kind==='arena')?2500:6000;}
+  function poll(){
+    if(stopped||busy)return;busy=true;clearTimeout(timer);
+    var want={};Object.keys(subs).forEach(function(p){want[p]=ver[p]||0;});
+    var req={docs:want};if(msubs.length)req.moves=mver;
+    fastCall('evpoll',req).then(function(res){
+      if(!res||!res.ok){if(res&&(res.error==='no_db'||res.error==='bad_request')){EVDB=null;stopped=true;if(P&&P.kind==='arena')renderArena();}return;}
+      if(!EVDB){EVDB=api0;if(P&&P.kind==='arena')renderArena();panel();}
+      Object.keys(res.docs||{}).forEach(function(p){var d=res.docs[p];ver[p]=d.t;(subs[p]||[]).forEach(function(fn){fn(snap(d.body));});});
+      if(res.moves){mver=res.moves.t;var docs=res.moves.docs.map(function(d){return {id:d.id,data:function(){return d.body;}};});msubs.forEach(function(fn){fn({docs:docs});});}
+    },function(){}).then(function(){busy=false;if(!stopped)timer=setTimeout(poll,again?300:delay());again=false;});
+  }
+  var api0={
+    doc:function(path){return {
+      set:function(body){return fastCall('evset',{path:path,body:body}).then(function(res){if(!res||!res.ok)throw new Error(res&&res.error||'evset');soon(300);});},
+      onSnapshot:function(fn){(subs[path]=subs[path]||[]).push(fn);soon(50);}};},
+    collection:function(){return {onSnapshot:function(fn){msubs.push(fn);soon(50);}};},
+    stop:function(){stopped=true;clearTimeout(timer);}
+  };
+  return api0;
+}
+function arWebStart(){if(!FAST||AR.web)return;AR.web=WebEv();arSubscribe(AR.web);}
+function arWebStop(){if(AR.web){AR.web.stop();AR.web=null;}EVDB=null;AR.cls={cfg:null,state:null,moves:{},mine:null};AR.names={};AR.asked={};}
+
+/* ---------- practice against bots ---------- */
+function arStartPractice(){
+  var now=Date.now(),cfg={eid:'practice-'+now,status:'live',start:now,end:now+(ARTEST?ARTEST.len:5*60000),roundSec:ARTEST?ARTEST.sec:20,mode:'solo',bots:2,openAll:false,practice:true};
+  AR.prac={cfg:cfg,state:MK.newEvent(cfg,now),moves:{},mine:null};AR.view='practice';AR.sel=null;AR.tab='map';arMine();AR.prac.moves.me=AR.prac.mine;renderArena();
+}
+
+/* ---------- player actions ---------- */
+function arJoin(did){var x=arX(),m=arMine();if(!x.state||x.state.status!=='live'||m.act.indexOf(did)>=0||m.act.length>=MK.MAXACT||!MK.allowed(did,m.ch,x.cfg))return;
+  m.act.push(did);arSendMine();toast(L('Đã mở quán ở ','Shop opened in ')+(lang==='vi'?MK.BY[did].vi:MK.BY[did].en)+L('. Bắt đầu bán từ vòng tới.','. You start selling next round.'));renderArena();}
+function arLeave(did){var m=arMine();m.act=m.act.filter(function(d){return d!==did;});arSendMine();renderArena();}
+function arDecide(did,v){var m=arMine(),t=MK.TYPES[MK.BY[did].type],o={};o[t.pick]=v;m.dec[did]=o;arSendMine();}
+var DUEL_COOL=30000,DUEL_SEC=20,ARTEST=window.__ARENA_TEST||null;   // tests shorten the rounds
+function arStartDuel(did,tgt){
+  var x=arX();if(!Bank||!Bank.duel||!x.state||x.state.status!=='live')return;
+  if(Date.now()-AR.lastDuel<(x===AR.prac?10000:DUEL_COOL))return;
+  AR.duel={d:did,tgt:tgt,qs:null,play:null,i:0,pts:0,right:0,left:DUEL_SEC,pick:null,correct:null,busy:true,done:false,def:MK.defenceOf(x.state,did,tgt)};
+  renderArena();var me=AR.duel;
+  Bank.duel(arMyCh()).then(function(res){if(AR.duel!==me)return;me.busy=false;if(!res.ok){me.err=bankError(res);renderArena();return;}me.qs=res.qs;me.play=res.play;arDuelQ();},function(){if(AR.duel===me){me.busy=false;me.err=bankError(netFail());renderArena();}});
+}
+function arDuelQ(){var D=AR.duel;D.pick=null;D.correct=null;D.e='';D.left=DUEL_SEC;clearInterval(AR.dt);
+  AR.dt=setInterval(function(){if(!AR.duel){clearInterval(AR.dt);return;}D.left--;var b=el('dbar');if(b)b.style.width=(D.left/DUEL_SEC*100)+'%';if(D.left<=0){clearInterval(AR.dt);arDuelAnswer(-1);}},1000);renderArena();}
+function arDuelAnswer(i){
+  var D=AR.duel;if(!D||D.correct!==null||D.busy)return;clearInterval(AR.dt);D.pick=i;D.busy=true;renderArena();
+  Bank.bossCheck(D.play,D.i,i).then(function(res){if(AR.duel!==D)return;D.busy=false;if(!res.ok){D.err=bankError(res);D.pick=null;renderArena();return;}
+    D.correct=res.correct;D.e=res.e||'';if(i===res.correct){D.right++;D.pts+=12+Math.round(8*Math.max(0,D.left)/DUEL_SEC);}renderArena();},
+    function(){if(AR.duel===D){D.busy=false;D.pick=null;D.err=bankError(netFail());renderArena();}});
+}
+function arDuelNext(){var D=AR.duel;if(D.i<D.qs.length-1){D.i++;arDuelQ();return;}arDuelFinish();}
+function arDuelFinish(){var D=AR.duel;if(!D||D.done||!D.qs)return;clearInterval(AR.dt);
+  D.done=true;D.win=D.pts>D.def;AR.lastDuel=Date.now();var m=arMine();m.n=(m.n||0)+1;m.duels.push({n:m.n,d:D.d,tgt:D.tgt,sc:D.pts});if(m.duels.length>12)m.duels=m.duels.slice(-12);arSendMine();renderArena();}
+
+/* ---------- drawing ---------- */
+var HR=28,HW=Math.sqrt(3)*HR;
+function hexXY(c,r){return [34+c*HW+(r%2?HW/2:0),36+r*HR*1.5];}
+function hexPath(x,y,r){var p='';for(var i=0;i<6;i++){var a=Math.PI/180*(60*i-30);p+=(i?'L':'M')+(x+r*Math.cos(a)).toFixed(1)+' '+(y+r*Math.sin(a)).toFixed(1);}return p+'Z';}
+function arMapSVG(){
+  var x=arX(),st=x.state,cfg=x.cfg,m=arMine(),me=arMe(),host=arHosting(),W=340,H=330,s='';
+  s+='<svg class="hexmap" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+L('Bản đồ thị trường TP.HCM','Ho Chi Minh City market map')+'">';
+  var riv=[[4.35,-0.6],[4.4,0.6],[4.55,1.6],[4.3,2.6],[4.25,3.6],[4.3,4.6],[4.45,5.5],[5.2,6.4],[5.9,7]].map(function(p){var q=hexXY(0,0);return [q[0]+p[0]*HW,q[1]+p[1]*HR*1.5];});
+  var d='M'+riv[0][0].toFixed(1)+' '+riv[0][1].toFixed(1);for(var i=1;i<riv.length;i++){var a=riv[i-1],b=riv[i];d+=' Q'+a[0].toFixed(1)+' '+a[1].toFixed(1)+' '+((a[0]+b[0])/2).toFixed(1)+' '+((a[1]+b[1])/2).toFixed(1);}
+  s+='<path d="'+d+'" fill="none" stroke="#7fb3d5" stroke-width="7" stroke-linecap="round" opacity=".55"/><text x="'+(riv[3][0]+12)+'" y="'+(riv[3][1]+4)+'" font-size="9" fill="#5b8fb0" transform="rotate(80 '+(riv[3][0]+12)+' '+(riv[3][1]+4)+')">'+L('Sông Sài Gòn','Saigon River')+'</text>';
+  MK.DISTRICTS.forEach(function(dd){
+    var p=hexXY(dd.col,dd.row),ok=host||MK.allowed(dd.id,m.ch,cfg),act=m.act.indexOf(dd.id)>=0,lead=st?MK.leader(st,dd.id):null,sel=AR.sel===dd.id;
+    var fill=lead?arColor(lead,st,cfg):'var(--card)';
+    s+='<g class="hex'+(ok?'':' locked')+'" data-hex="'+dd.id+'" role="button" tabindex="0" aria-label="'+esc(lang==='vi'?dd.vi:dd.en)+'">';
+    s+='<path d="'+hexPath(p[0],p[1],HR-1.5)+'" fill="'+fill+'" fill-opacity="'+(lead?(lead===me?.9:.55):1)+'" stroke="'+(sel?'var(--ink)':act?'var(--gold)':'var(--line)')+'" stroke-width="'+(sel||act?3.2:1.5)+'"/>';
+    s+='<text x="'+p[0]+'" y="'+(p[1]-3)+'" text-anchor="middle" font-size="11" font-weight="800" fill="var(--ink)">'+esc(dd.short)+'</text>';
+    var sub=!ok?'🔒':act&&st&&st.d[dd.id].last[me]?Math.round(st.d[dd.id].last[me].sh*100)+'%':TYPE_TXT[dd.type].ic;
+    if(dd.type==='mono'&&st&&st.d[dd.id].holder===me)sub='👑';
+    s+='<text x="'+p[0]+'" y="'+(p[1]+11)+'" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink)">'+sub+'</text></g>';
+  });
+  return s+'</svg>';
+}
+function arSellers(did){
+  var x=arX(),st=x.state,cfg=x.cfg,dx=st.d[did],last=dx.last,ids=Object.keys(last);
+  if(!ids.length)ids=MK.botIds(cfg,did);
+  var m=arMine(),me=arMe();if(m.act.indexOf(did)>=0&&ids.indexOf(me)<0)ids.push(me);
+  return ids.sort(function(a,b){return ((last[b]&&last[b].q)||0)-((last[a]&&last[a].q)||0);});
+}
+function arCard(did){
+  var x=arX(),st=x.state,cfg=x.cfg,dd=MK.BY[did],T=MK.TYPES[dd.type],tt=TYPE_TXT[dd.type],m=arMine(),me=arMe(),host=arHosting();
+  var ok=host||MK.allowed(did,m.ch,cfg),act=m.act.indexOf(did)>=0,dx=st.d[did],live=st.status==='live',h='';
+  h+='<div class="card arcard" style="margin-top:10px"><span class="tag">'+tt.ic+' '+esc(tx(tt.n))+'</span>'+(dd.type==='comp'&&dx.P!==null?' <span class="tag vi">P = '+fmt(dx.P)+'k</span>':'')+'<h3 class="q" style="margin-bottom:6px">'+esc(lang==='vi'?dd.vi:dd.en)+'</h3><p class="small">'+esc(tx(tt.r))+'</p>';
+  if(!ok){h+='<div class="fb hint">'+L('Mở khi bạn tới Chương ','Opens when you reach Chapter ')+dd.ch+'. '+L('Đi tiếp trên con đường để mở thêm quận.','Keep walking the road to open more districts.')+'</div></div>';return h;}
+  var ids=arSellers(did);arAskNames(ids);
+  h+='<div class="tbl-wrap"><table><thead><tr><th>'+L('Quán','Shop')+'</th><th>'+(T.pick==='p'?L('Giá','Price'):L('Số ly','Cups'))+'</th><th title="'+L('Thị phần','Share')+'">%</th><th title="'+L('Điểm phòng thủ','Defence')+'">🛡</th></tr></thead><tbody>';
+  var canFight=!host&&act&&live&&Bank&&Bank.duel,cool=Math.max(0,(x===AR.prac?10000:DUEL_COOL)-(Date.now()-AR.lastDuel));
+  ids.forEach(function(id){var r=dx.last[id],lv=dx.lvl[id]===undefined?(id===me&&has('sign')?2:1):dx.lvl[id],isH=dd.type==='mono'&&dx.holder===id;
+    var v=r?(T.pick==='p'?(r.p===null?'—':fmt(r.p)+'k'):fmt(r.q)):'—';
+    var fight=canFight&&id!==me&&(dd.type!=='mono'||isH)&&(r||MK.isBot(id));
+    var dv=id===me?(dx.def[me]||50):Math.round(MK.defenceOf(st,did,id));
+    h+='<tr'+(id===me?' class="best"':'')+'><td class="who-cell"><span class="dot" style="background:'+arColor(id,st,cfg)+'"></span><span class="nm">'+esc(arName(id))+'</span>'+(isH?' 👑':'')+(dd.type==='mono'?'':' <span class="lv" title="'+(dd.type==='comp'?L('Lợi thế chi phí','Cost edge'):L('Thương hiệu','Brand'))+'">★'+lv+'</span>')+(r?'<br><span class="small muted">'+L('lãi ','profit ')+fmt(r.pr)+'k</span>':'')+'</td><td>'+v+'</td><td>'+(r?Math.round(r.sh*100)+'%':'—')+'</td><td>'+
+      (fight?'<button class="btn ghost mini" data-act="arduel" data-d="'+did+'" data-t="'+esc(id)+'" aria-label="'+L('Thách đấu','Duel')+' '+esc(arName(id))+'"'+(cool?' disabled title="'+mmss(cool)+'"':'')+'>⚔ '+dv+'</button>':'🛡'+dv)+'</td></tr>';});
+  h+='</tbody></table></div>';
+  if(!host&&live){
+    if(act){
+      var holderOnly=dd.type==='mono'&&dx.holder!==me;
+      if(holderOnly)h+='<div class="fb hint">'+L('Bạn chưa có giấy phép nên chưa bán được. Bấm ⚔ cạnh chủ giấy phép để thách đấu và giành giấy phép.','You have no licence, so you cannot sell yet. Tap ⚔ next to the holder to duel for the licence.')+'</div>';
+      else{var v0=MK.decision(dd,m),pv=MK.preview(st,cfg,did,me,v0,m);
+        h+='<div class="small muted" style="font-weight:700;margin-top:10px">'+(T.pick==='p'?L('Giá mỗi ly của bạn (nghìn đồng)','Your price per cup (thousand VND)'):L('Số ly bạn bán mỗi vòng','Cups you sell each round'))+'</div>';
+        h+='<div class="picker"><button class="step" data-act="arstep" data-d="'+did+'" data-v="-1" aria-label="−1">−</button><div class="big" id="arv">'+v0+'</div><button class="step" data-act="arstep" data-d="'+did+'" data-v="1" aria-label="+1">+</button></div>';
+        h+='<input type="range" id="arr" data-d="'+did+'" min="'+T.min+'" max="'+T.max+'" step="1" value="'+v0+'" aria-label="'+(T.pick==='p'?L('Giá','Price'):L('Số ly','Cups'))+'">';
+        h+='<p class="small" id="arpv">'+arPreviewText(did,pv)+'</p>';}
+      h+='<div class="acts"><button class="btn ghost" data-act="arleave" data-d="'+did+'">'+L('Rời quận này','Leave this district')+'</button></div>';
+      if(cool&&canFight)h+='<p class="small muted">'+L('Thách đấu tiếp sau ','Next duel in ')+'<b id="ar-cool">'+mmss(cool)+'</b></p>';
+    }else h+='<div class="acts" style="margin-top:10px"><button class="btn" data-act="arjoin" data-d="'+did+'"'+(m.act.length>=MK.MAXACT?' disabled':'')+'>'+L('Mở quán ở đây','Open a shop here')+' ('+m.act.length+'/'+MK.MAXACT+')</button></div>'+(m.act.length>=MK.MAXACT?'<p class="small muted">'+L('Tối đa 3 quận cùng lúc. Rời một quận để mở quận mới.','At most 3 districts at a time. Leave one to open another.')+'</p>':'');
+  }
+  return h+'</div>';
+}
+function arPreviewText(did,pv){
+  if(!pv)return '';var dd=MK.BY[did];
+  if(dd.type==='comp')return L('Dự kiến (nếu các quán khác giữ như vòng trước): giá chợ ≈ ','Expected (if others repeat last round): market price ≈ ')+fmt(pv.p)+'k · MC = '+fmt(pv.mc)+'k · '+L('lãi ≈ ','profit ≈ ')+fmt(pv.pr)+'k'+(pv.mc<pv.p-0.5?L(' · MC < P: bán thêm còn có lãi',' · MC < P: one more cup still pays'):pv.mc>pv.p+0.5?L(' · MC > P: đang bán quá nhiều',' · MC > P: selling too much'):L(' · MC ≈ P: tối ưu',' · MC ≈ P: optimal'));
+  return L('Dự kiến (nếu các quán khác giữ như vòng trước): ','Expected (if others repeat last round): ')+fmt(pv.q)+L(' ly',' cups')+' · '+L('thị phần ','share ')+Math.round(pv.sh*100)+'% · '+L('lãi ≈ ','profit ≈ ')+fmt(pv.pr)+'k';
+}
+function arRanking(){
+  var x=arX(),st=x.state,cfg=x.cfg,me=arMe(),share=MK.cityShare(st),ids=Object.keys(st.sc).sort(function(a,b){return st.sc[b].pr-st.sc[a].pr||st.sc[b].w-st.sc[a].w;}),h='';
+  arAskNames(ids);
+  if(cfg.mode==='team'){var n=Math.max(2,Math.min(MK.TEAMS.length,+cfg.teams||2)),tm=[];for(var i=0;i<n;i++)tm.push({i:i,pr:0,n:0,sh:0});
+    ids.forEach(function(p){var t=tm[st.sc[p].team];if(t){t.pr+=st.sc[p].pr;t.n++;t.sh+=share[p]||0;}});
+    h+='<div class="card" style="margin-top:10px"><p class="eyebrow" style="margin:0 0 6px">'+L('Các đội','Teams')+'</p>';
+    tm.slice().sort(function(a,b){return b.pr-a.pr;}).forEach(function(t){h+='<div class="rowline"><span><span class="dot" style="background:'+MK.TEAMS[t.i].color+'"></span>'+esc(tx(V(MK.TEAMS[t.i].vi,MK.TEAMS[t.i].en)))+' · '+t.n+L(' người',' players')+'</span><b>'+fmt(t.pr)+'k · '+Math.round(t.sh*100)+'%</b></div>';});h+='</div>';}
+  h+='<div class="card" style="margin-top:10px"><p class="eyebrow" style="margin:0 0 6px">'+L('Xếp hạng theo tổng lãi','Ranking by total profit')+'</p>';
+  if(!ids.length)h+='<p class="muted small">'+L('Chưa ai bán được ly nào. Kết quả có sau vòng đầu tiên.','Nobody has sold yet. Results appear after the first round.')+'</p>';
+  else{h+='<div class="tbl-wrap"><table><thead><tr><th>#</th><th>'+L('Người chơi','Player')+'</th><th>'+L('Lãi','Profit')+'</th><th>'+L('Thị phần TP','City share')+'</th><th>⚔</th></tr></thead><tbody>';
+    ids.forEach(function(p,i){h+='<tr'+(p===me?' class="best"':'')+'><td>'+(i+1)+'</td><td><span class="dot" style="background:'+arColor(p,st,cfg)+'"></span>'+esc(arName(p))+'</td><td>'+fmt(st.sc[p].pr)+'k</td><td>'+Math.round((share[p]||0)*100)+'%</td><td>'+st.sc[p].w+'</td></tr>';});
+    h+='</tbody></table></div>';}
+  if(st.log.length){h+='<p class="eyebrow" style="margin:12px 0 4px">'+L('Thách đấu gần đây','Recent duels')+'</p>';
+    st.log.slice(0,6).forEach(function(e){arAskNames([e.a]);h+='<div class="rowline"><span>'+esc(arName(e.a))+' ⚔ '+esc(arName(e.b))+' · '+esc(MK.BY[e.d].short)+'</span><b>'+e.s+' vs '+Math.round(e.def)+' '+(e.w?'✓':'✗')+'</b></div>';});}
+  return h+'</div>';
+}
+function arResults(){
+  var x=arX(),c=x.cfg,r=c.results,me=arMe(),h='';if(!r)return '';
+  arAskNames(r.rank.map(function(p){return p.id;}));
+  var place=r.rank.map(function(p){return p.id;}).indexOf(me)+1;
+  h+='<div class="card center" style="margin-top:10px"><div class="eyebrow">'+(c.practice?L('Kết quả luyện tập','Practice result'):L('Kết quả thi đấu','Event results'))+'</div><h1>'+(place===1&&!c.practice?L('Vô địch!','Champion!'):place?L('Hạng ','Place ')+place:L('Thi đấu đã kết thúc','The event has ended'))+'</h1>';
+  if(!c.practice&&me&&r.xp[me]!==undefined)h+='<p><b>+'+r.xp[me]+' XP</b>'+((r.badges[me]||[]).length?'<br>'+(r.badges[me]||[]).map(function(b){return esc(badgeName(b));}).join(' · '):'')+'</p>';
+  if(c.practice&&r.rank[0])h+='<p>'+L('Tổng lãi: ','Total profit: ')+'<b>'+fmt(r.rank[0].pr)+'k</b><br><span class="muted small">'+L('Luyện tập không tính XP. Thi đấu thật khi giáo viên mở trên lớp.','Practice gives no XP. The real event opens in class.')+'</span></p>';
+  h+='<div class="rows">';r.rank.slice(0,c.practice?1:10).forEach(function(p,i){h+='<div class="rowline'+(p.id===me?' me':'')+'"><span>'+(i<3?['🏆','🥈','🥉'][i]:(i+1)+'.')+' '+esc(arName(p.id))+'</span><b>'+fmt(p.pr)+'k · ⚔'+p.w+'</b></div>';});h+='</div>';
+  if(c.mode==='team'&&r.teamWin>=0)h+='<p style="margin-top:10px">🤝 '+L('Đội thắng: ','Winning team: ')+'<b>'+esc(tx(V(MK.TEAMS[r.teamWin].vi,MK.TEAMS[r.teamWin].en)))+'</b></p>';
+  var ks=Object.keys(r.kings||{});if(ks.length&&!c.practice)h+='<p class="small" style="text-align:left;margin-top:10px">👑 '+ks.map(function(d){return esc(MK.BY[d].short)+': '+esc(arName(r.kings[d]));}).join(' · ')+'</p>';
+  return h+'</div>';
+}
+function arLobby(){
+  var c=AR.cls.cfg,h='<div class="card"><span class="tag">'+L('Phiên bản 3','Version 3')+'</span><h1>'+L('Bản đồ thị trường TP.HCM','The Ho Chi Minh City market map')+'</h1><p>'+
+    L('22 quận, 4 loại thị trường. Khi giáo viên mở thi đấu trên lớp, bạn mở quán ở tối đa 3 quận, chọn giá hoặc số ly mỗi vòng, và thách đấu đối thủ bằng 5 câu hỏi. Ai có tổng lãi cao nhất khi hết giờ là vô địch.',
+      '22 districts, 4 kinds of market. When your teacher opens an event in class, you open shops in up to 3 districts, choose a price or a quantity each round, and duel rivals with 5 questions. The highest total profit when time runs out wins.')+'</p><div class="rows">';
+  ['comp','mono','oligo','center'].forEach(function(t){h+='<div class="rowline"><span>'+TYPE_TXT[t].ic+' '+esc(tx(TYPE_TXT[t].n))+'</span><b>'+L('từ Chương ','from Ch. ')+MK.NEED[t]+'</b></div>';});
+  h+='</div><p class="small muted" style="margin-top:8px">'+L('Phần thưởng: XP thưởng và huy hiệu vô địch: ','Rewards: bonus XP and champion badges: ')+'🏆 +'+MK.XP.gold+' · 🥈 +'+MK.XP.silver+' · 🥉 +'+MK.XP.bronze+' · 👑 +'+MK.XP.king+' · ⚔️ +'+MK.XP.duelist+' · 🤝 +'+MK.XP.team+' · 🎟️ +'+MK.XP.played+' XP</p></div>';
+  if(S.badges&&S.badges.length)h+='<div class="card" style="margin-top:10px"><p class="eyebrow" style="margin:0 0 6px">'+L('Huy hiệu của bạn','Your badges')+'</p><div class="hud" style="margin:0">'+badgeLine(S.badges)+'</div></div>';
+  if(c&&c.status==='ended'&&c.results)h+=arResults();
+  if(teacherAllowed()&&EVDB)h+='<div class="card" style="margin-top:10px"><p class="eyebrow" style="margin:0 0 8px">'+L('Mở thi đấu cho lớp','Open an event for the class')+'</p><div class="form">'+
+    '<label>'+L('Thời lượng','Duration')+'<select id="ev-min">'+[5,10,15,20,30,45].map(function(v){return '<option value="'+v+'"'+(v===15?' selected':'')+'>'+v+L(' phút',' min')+'</option>';}).join('')+'</select></label>'+
+    '<label>'+L('Mỗi vòng thị trường','Each market round')+'<select id="ev-sec">'+[30,45,60,90,120].map(function(v){return '<option value="'+v+'"'+(v===60?' selected':'')+'>'+v+L(' giây',' s')+'</option>';}).join('')+'</select></label>'+
+    '<label>'+L('Hình thức','Format')+'<select id="ev-mode"><option value="solo">'+L('Cá nhân','Individual')+'</option>'+[2,3,4,5,6].map(function(v){return '<option value="team'+v+'">'+v+L(' đội',' teams')+'</option>';}).join('')+'</select></label>'+
+    '<label>'+L('Bot mỗi quận','Bots per district')+'<select id="ev-bots">'+[0,1,2,3].map(function(v){return '<option value="'+v+'"'+(v===2?' selected':'')+'>'+v+'</option>';}).join('')+'</select></label></div>'+
+    '<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="ev-all"> '+L('Mở mọi quận (bỏ điều kiện chương)','Open every district (ignore the chapter rule)')+'</label>'+
+    '<p class="small muted" style="margin-top:6px">'+L('Máy của bạn là máy chủ: giữ trang này mở đến khi hết giờ. Học viên vào bằng nút ⚔️ trên con đường.','Your device is the host: keep this page open until time runs out. Students join with the ⚔️ button on the road.')+'</p>'+
+    '<div class="acts"><button class="btn" data-act="evopen">⚔️ '+L('Mở thi đấu','Open the event')+'</button></div></div>';
+  else if(EVDB||!SHEETS||!teacherAllowed())h+='<p class="fb hint" style="margin-top:10px">'+L('Chưa có cuộc thi nào đang mở. Giáo viên sẽ mở trong giờ học; trong lúc chờ, hãy luyện tập với bot.','No event is open now. Your teacher opens one in class; meanwhile, practise against bots.')+'</p>';
+  else h+='<p class="fb hint" style="margin-top:10px">'+L('Thi đấu trực tiếp cả lớp cần Cloudflare Worker có cơ sở dữ liệu D1 (gắn tên DB). Xem Bước 2 trong hướng dẫn Release 3. Trong lúc chờ, vẫn luyện tập được với bot.','Live class events need the Cloudflare Worker with a D1 database bound as DB (Release 3 guide, step 2). Practice against bots works meanwhile.')+'</p>';
+  return h;
+}
+function renderArena(){
+  if(!P||P.kind!=='arena')return;
+  var x=arX(),st=x.state,cfg=x.cfg,host=arHosting(),h='',bar='';
+  el('play-title').innerHTML='<span style="white-space:nowrap">⚔️ TP.HCM</span>'+(AR.view==='practice'?'<small>'+L('Luyện tập','Practice')+'</small>':'');
+  if(AR.duel){renderDuel();return;}
+  var live=cfg&&st&&st.eid===cfg.eid&&(cfg.status==='live'||cfg.status==='ended')&&(AR.view==='practice'||arClassLive()||host);
+  if(!live||(AR.view!=='practice'&&!arClassLive())){
+    AR.view='class';el('play-hud').innerHTML='';
+    h=arClassLive()&&!(AR.cls.state&&AR.cls.state.eid===AR.cls.cfg.eid)?'<p class="loading muted">'+L('Đang tải bản đồ thi đấu…','Loading the battle map…')+'</p>':arLobby();
+    bar='<button class="btn ghost" data-act="quit">'+L('Về con đường','Back to the road')+'</button><button class="btn" data-act="arpractice">'+L('Luyện tập với bot (5 phút)','Practise vs bots (5 min)')+'</button>';
+    el('play-body').innerHTML=h;el('play-bar').innerHTML=bar;return;
+  }
+  AR.seenRound=st.round;AR.seenLog=st.log.length;
+  var m=arMine(),me=arMe(),myPr=st.sc[me]?st.sc[me].pr:0;
+  el('play-hud').innerHTML='<span class="pill">'+L('Vòng ','Round ')+st.round+' · ⏱ <b id="ar-next">'+mmss(st.nextAt-Date.now())+'</b></span><span class="pill lives">'+L('Còn ','Left ')+'<b id="ar-left">'+mmss(cfg.end-Date.now())+'</b></span>'+(host?'':'<span class="pill cap">'+L('Lãi ','Profit ')+fmt(myPr)+'k</span>');
+  if(host)h+='<div class="fb hint" style="margin-top:0">'+L('Bạn là máy chủ của cuộc thi: giữ trang này mở. ','You are hosting this event: keep this page open. ')+Object.keys(st.sc).length+L(' người đang chơi · ',' players selling · ')+(cfg.mode==='team'?cfg.teams+L(' đội',' teams'):L('cá nhân','individual'))+'</div>';
+  else if(cfg.mode==='team'&&st.sc[me]&&st.sc[me].team>=0){var tm=MK.TEAMS[st.sc[me].team];h+='<p class="small" style="margin:0 0 6px"><span class="dot" style="background:'+tm.color+'"></span>'+L('Bạn ở ','You are in ')+'<b>'+esc(tx(V(tm.vi,tm.en)))+'</b></p>';}
+  h+='<div class="tabs" role="tablist"><button role="tab" data-act="artab" data-t="map" aria-selected="'+(AR.tab==='map')+'">'+L('Bản đồ','Map')+'</button><button role="tab" data-act="artab" data-t="rank" aria-selected="'+(AR.tab==='rank')+'">'+L('Xếp hạng','Ranking')+'</button></div>';
+  if(cfg.status==='ended'){h+=arResults();}
+  else if(AR.tab==='rank')h+=arRanking();
+  else{
+    h+='<div class="map hexwrap">'+arMapSVG()+'</div><div class="legend small"><span><span class="dot" style="background:var(--gold)"></span>'+L('Bạn dẫn đầu','You lead')+'</span><span><span class="dot" style="background:#9aa7ad"></span>'+L('Bot dẫn đầu','A bot leads')+'</span><span><span class="dot" style="background:#2f6fd6"></span>'+(cfg.mode==='team'?L('Màu đội dẫn đầu','Leading team colour'):L('Người khác dẫn đầu','Another player leads'))+'</span><span>'+L('Viền vàng = quán của bạn','Gold border = your shops')+'</span></div>';
+    if(!host&&!m.act.length&&!AR.sel)h+='<p class="fb hint">'+L('Chạm một quận để xem thị trường và mở quán (tối đa 3 quận).','Tap a district to see its market and open a shop (up to 3 districts).')+'</p>';
+    if(AR.sel)h+=arCard(AR.sel);
+    else if(m.act.length)h+='<div class="card" style="margin-top:10px"><p class="eyebrow" style="margin:0 0 6px">'+L('Quán của bạn','Your shops')+'</p>'+m.act.map(function(d){var r=st.d[d].last[me];return '<div class="rowline"><button class="btn ghost mini" data-hex="'+d+'">'+esc(lang==='vi'?MK.BY[d].vi:MK.BY[d].en)+'</button><b>'+(r?Math.round(r.sh*100)+'% · '+fmt(r.pr)+'k':L('bán từ vòng tới','sells next round'))+'</b></div>';}).join('')+'</div>';
+  }
+  el('play-body').innerHTML=h;
+  bar='<button class="btn ghost" data-act="quit">'+L('Về con đường','Back to the road')+'</button>';
+  if(host&&cfg.status==='live')bar+='<button class="btn ghost" data-act="evmore">+5 '+L('phút','min')+'</button><button class="btn" style="background:var(--bad);border-color:var(--bad)" data-act="evstop">'+(AR.confirmStop?L('Bấm lần nữa để kết thúc','Tap again to end'):L('Kết thúc ngay','End now'))+'</button>';
+  if(AR.view==='practice'&&cfg.status==='ended')bar+='<button class="btn" data-act="arpractice">'+L('Luyện tập lại','Practise again')+'</button>';
+  el('play-bar').innerHTML=bar;
+}
+function renderDuel(){
+  var D=AR.duel,h='',dd=MK.BY[D.d];el('play-hud').innerHTML='<span class="pill xp">'+D.pts+L(' điểm',' pts')+'</span><span class="pill">🛡 '+Math.round(D.def)+'</span>';
+  h+='<div class="scene"><b>⚔️ '+L('Thách đấu ','Duel vs ')+esc(arName(D.tgt))+'</b> · '+esc(lang==='vi'?dd.vi:dd.en)+'<br><span class="small">'+L('5 câu, mỗi câu 20 giây. Đúng được 12 điểm + thưởng nhanh tới 8 điểm. Vượt điểm phòng thủ ','5 questions, 20 seconds each. A right answer earns 12 points + up to 8 for speed. Beat the defence of ')+'<b>'+Math.round(D.def)+'</b>'+L(' để thắng.',' to win.')+'</span></div>';
+  if(D.err){el('play-body').innerHTML=h+'<div class="fb bad">'+D.err+'</div>';el('play-bar').innerHTML='<button class="btn" data-act="duelquit">'+L('Về bản đồ','Back to the map')+'</button>';return;}
+  if(!D.qs){el('play-body').innerHTML=h+'<p class="loading muted">'+L('Đang lấy câu hỏi…','Fetching questions…')+'</p>';el('play-bar').innerHTML='';return;}
+  if(D.done){var dfx=dd.type==='mono'?L('Bạn giành giấy phép độc quyền!','You take the monopoly licence!'):dd.type==='comp'?L('MC của bạn ở quận này giảm 1.','Your MC in this district falls by 1.'):L('Thương hiệu của bạn +1, đối thủ −1.','Your brand +1, the rival −1.');
+    h+='<div class="card center"><h1>'+(D.win?L('Thắng!','You win!'):L('Thua rồi','You lost'))+'</h1><div class="kpis"><div class="kpi"><span>'+L('Điểm của bạn','Your score')+'</span><b>'+D.pts+'</b></div><div class="kpi"><span>'+L('Phòng thủ','Defence')+'</span><b>'+Math.round(D.def)+'</b></div><div class="kpi"><span>'+L('Đúng','Right')+'</span><b>'+D.right+'/'+D.qs.length+'</b></div></div><p style="margin-top:10px">'+(D.win?dfx+' '+L('Điểm '+D.pts+' thành điểm phòng thủ mới của bạn ở quận này.','Your '+D.pts+' becomes your new defence here.'):L('Thử lại sau 30 giây, hoặc thách đấu đối thủ khác.','Try again in 30 seconds, or duel another rival.'))+'</p><p class="small muted">'+L('Bản đồ cập nhật trong vài giây.','The map updates in a few seconds.')+'</p></div>';
+    el('play-body').innerHTML=h;el('play-bar').innerHTML='<button class="btn" data-act="duelquit">'+L('Về bản đồ','Back to the map')+'</button>';return;}
+  var q=D.qs[D.i],done=D.correct!==null;
+  h+='<div class="dots" aria-hidden="true">';D.qs.forEach(function(_,i){h+='<i class="'+(i<D.i||(i===D.i&&done)?'done':i===D.i?'cur':'')+'"></i>';});h+='</div>';
+  h+='<div class="timer" aria-hidden="true"><i id="dbar" style="width:'+(D.left/DUEL_SEC*100)+'%"></i></div><div class="card"><span class="tag">'+L('Câu ','Question ')+(D.i+1)+'/'+D.qs.length+' · '+L('Chương ','Chapter ')+q.ch+'</span>'+viBadge()+'<h3 class="q">'+esc(q.q)+'</h3>';
+  q.opts.forEach(function(o,i){var c='';if(done){if(i===D.correct)c=' ok';else if(i===D.pick)c=' no';}else if(D.pick===i)c=' sel';h+='<button class="opt'+c+'" data-act="duelans" data-i="'+i+'"'+(done||D.busy?' disabled':'')+'>'+esc(o)+'</button>';});
+  if(done)h+='<div class="fb '+(D.pick===D.correct?'good':'bad')+'"><b>'+(D.pick===D.correct?L('Chính xác!','Correct!'):D.pick===-1?L('Hết giờ!','Time is up!'):L('Sai rồi!','Wrong!'))+'</b>'+(D.e?esc(D.e):'')+'</div>';
+  el('play-body').innerHTML=h+'</div>';
+  el('play-bar').innerHTML='<button class="btn ghost" data-act="duelgiveup">'+L('Bỏ cuộc','Give up')+'</button>'+(done?'<button class="btn" data-act="duelnext">'+(D.i===D.qs.length-1?L('Xem kết quả','See the result'):L('Câu tiếp','Next question'))+'</button>':'');
+}
+function openArena(){closeSheet();P={kind:'arena',xp:0,node:{id:'',name:V('','')}};if(AR.view==='practice'&&!(AR.prac&&AR.prac.cfg.status==='live'))AR.view='class';AR.duel=null;openPlay();renderArena();}
+function arBanner(){
+  var c=AR.cls.cfg;if(!c||c.status!=='live')return '';
+  return '<div class="evbanner"><span>⚔️ '+(cloud.owner?L('Bạn đang chủ trì thi đấu','You are hosting an event'):L('Đang thi đấu trên bản đồ TP.HCM','A market battle is on'))+' · '+L('còn ','left ')+'<b id="ev-left">'+mmss(c.end-Date.now())+'</b></span><button class="btn" data-act="arena">'+(cloud.owner?L('Mở','Open'):L('Vào thi đấu','Join'))+'</button></div>';
+}
+function arClock(){
+  arHostTick();arPracTick();
+  var c=AR.cls.cfg,e=el('ev-left');if(e&&c)e.textContent=mmss(c.end-Date.now());
+  var x=arX(),st=x.state,cf=x.cfg;
+  if(P&&P.kind==='arena'&&st&&cf){var a=el('ar-next'),b=el('ar-left'),k=el('ar-cool');if(a)a.textContent=mmss(st.nextAt-Date.now());if(b)b.textContent=mmss(cf.end-Date.now());
+    if(k){var cool=Math.max(0,(x===AR.prac?10000:DUEL_COOL)-(Date.now()-AR.lastDuel));k.textContent=mmss(cool);if(!cool&&!AR.duel)renderArena();}}
+}
+setInterval(arClock,1000);
 
 /* ================= EVENTS ================= */
 function playNode(){var nd=NODES[S.pos];if(nd.kind==='stage')startStage(nd);else if(nd.kind==='boss')bossIntro(nd);else startMission(nd);}
@@ -1055,8 +1445,9 @@ document.addEventListener('click',function(e){
   var lb=e.target.closest('[data-lang]');
   if(lb){lang=lb.dataset.lang;try{localStorage.setItem('arena-lang',lang);}catch(_){}renderMap();
     if(sheetMode==='talk')renderTalk();else if(sheetMode==='shop')renderShop();else if(sheetMode==='menu')renderMenu();else if(sheetMode==='board')renderBoard();
-    if(P){if(P.kind==='stage')(P.res?renderStageResult:renderStage)();else if(P.kind==='boss')(P.res?renderBossResult:renderBoss)();else if(P.kind==='decide')renderDecide();else if(P.kind==='rounds')renderRounds();else if(P.kind==='bossintro')bossIntro(P.node);else if(P.kind==='dash')renderDash();}
+    if(P){if(P.kind==='stage')(P.res?renderStageResult:renderStage)();else if(P.kind==='boss')(P.res?renderBossResult:renderBoss)();else if(P.kind==='decide')renderDecide();else if(P.kind==='rounds')renderRounds();else if(P.kind==='bossintro')bossIntro(P.node);else if(P.kind==='dash')renderDash();else if(P.kind==='arena')renderArena();}
     return;}
+  var hx=e.target.closest('[data-hex]');if(hx&&P&&P.kind==='arena'){AR.sel=AR.sel===hx.dataset.hex&&!hx.classList.contains('mini')?null:hx.dataset.hex;AR.tab='map';renderArena();return;}
   var npc=e.target.closest('[data-npc]');if(npc&&!walking&&!P){openNpc(+npc.dataset.npc);return;}
   var node=e.target.closest('[data-node]');
   if(node&&!P){var i=+node.dataset.node;if(i===S.pos)return;
@@ -1083,7 +1474,21 @@ document.addEventListener('click',function(e){
    case 'reset':if(a.dataset.c){S=fresh();persist();closeSheet();renderMap();follow(0);}else{a.dataset.c='1';renderMenu(true);el('sheet').querySelector('[data-act="reset"]').dataset.c='1';}break;
    case 'npcans':npcAnswer(+a.dataset.i);break;
    case 'usehint':npcHint();break;
-   case 'quit':closePlay();break;
+   case 'quit':if(P&&P.kind==='arena'){AR.duel=null;clearInterval(AR.dt);AR.confirmStop=false;}closePlay();break;
+   case 'arena':if(!walking)openArena();break;
+   case 'arpractice':arStartPractice();break;
+   case 'artab':AR.tab=a.dataset.t;renderArena();break;
+   case 'arjoin':arJoin(a.dataset.d);break;
+   case 'arleave':arLeave(a.dataset.d);break;
+   case 'arstep':var sd=a.dataset.d,st0=MK.TYPES[MK.BY[sd].type],rg=el('arr'),nv=Math.max(st0.min,Math.min(st0.max,(+rg.value)+(+a.dataset.v)));rg.value=nv;arSlide(sd,nv);break;
+   case 'arduel':arStartDuel(a.dataset.d,a.dataset.t);break;
+   case 'duelans':arDuelAnswer(+a.dataset.i);break;
+   case 'duelnext':arDuelNext();break;
+   case 'duelgiveup':arDuelFinish();break;
+   case 'duelquit':AR.duel=null;clearInterval(AR.dt);renderArena();break;
+   case 'evopen':if(teacherAllowed()){var md=el('ev-mode').value;arOpenEvent({min:+el('ev-min').value,sec:+el('ev-sec').value,mode:md==='solo'?'solo':'team',teams:md==='solo'?0:+md.slice(4),bots:+el('ev-bots').value,openAll:el('ev-all').checked});}break;
+   case 'evmore':if(arHosting())arSetEnd(AR.cls.cfg.end+300000);break;
+   case 'evstop':if(arHosting()){if(AR.confirmStop){AR.confirmStop=false;arSetEnd(Date.now());arHostTick();}else{AR.confirmStop=true;renderArena();}}break;
    case 'replay':var nd=P.node;stopTimer();P=null;if(nd.kind==='stage')startStage(nd);else if(nd.kind==='boss')bossIntro(nd);else startMission(nd);break;
    case 'mc':if(!P.busy){P.t.sel=+a.dataset.i;renderStage();}break;
    case 'tf':P.t.ans[+a.dataset.i]=a.dataset.v==='true';renderStage();break;
@@ -1105,10 +1510,11 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('change',function(e){if(e.target.id==='hide-me'){S.hide=e.target.checked;persist();}
   if(e.target.id==='showboard'&&teacherAllowed()&&cloud.db)writeConfig({showBoard:e.target.checked}).then(function(){panel();});});
-document.addEventListener('input',function(e){if(e.target.id==='dr'&&P&&P.kind==='decide'){P.x=+e.target.value;el('dv').innerHTML=P.x+' <small>'+tx(P.m.unit)+'</small>';var b=el('play-bar').querySelector('[data-act="dtry"]');if(b)b.textContent=L('Thử với ','Try ')+P.x;}});
+function arSlide(did,v){arDecide(did,v);var x=arX(),b=el('arv'),pv=el('arpv');if(b)b.textContent=v;if(pv)pv.innerHTML=arPreviewText(did,MK.preview(x.state,x.cfg,did,arMe(),v,arMine()));}
+document.addEventListener('input',function(e){if(e.target.id==='arr'&&P&&P.kind==='arena'){arSlide(e.target.dataset.d,+e.target.value);return;}if(e.target.id==='dr'&&P&&P.kind==='decide'){P.x=+e.target.value;el('dv').innerHTML=P.x+' <small>'+tx(P.m.unit)+'</small>';var b=el('play-bar').querySelector('[data-act="dtry"]');if(b)b.textContent=L('Thử với ','Try ')+P.x;}});
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){if(sheetMode)closeSheet();}
-  if((e.key==='Enter'||e.key===' ')&&e.target.closest&&e.target.closest('[data-npc],[data-node]')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
+  if((e.key==='Enter'||e.key===' ')&&e.target.closest&&e.target.closest('[data-npc],[data-node],[data-hex]')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
 });
 el('ov').addEventListener('click',function(e){if(e.target===el('ov'))closeSheet();});
 window.addEventListener('pageshow',function(){syncCafe();if(!P)renderMap();});
