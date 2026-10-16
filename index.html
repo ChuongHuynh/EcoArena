@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0f766e"><meta name="description" content="Kinh tế vi mô BEE1037 thành trò chơi: đi trên con đường kinh doanh.">
+<meta name="theme-color" content="#3b3e43"><meta name="description" content="ZenRoad · Economics Arena: Kinh tế vi mô thành trò chơi trên con đường kinh doanh.">
+<meta name="author" content="@chuonghn">
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://script.google.com">
 <script>window.ARENA_RELEASE=true;</script>
 <style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head><body>
@@ -20,17 +22,18 @@
   --good:#1f8a4c; --good-soft:#d9f2e3; --bad:#c2410c; --bad-soft:#fde4d6;
   --coffee:#7a4a2a; --coffee-soft:#f1e4d8;
   --road:#4a5658; --road-edge:#2f3a3c; --lane:#f4f1e4; --ground-a:#e2ebe4; --ground-b:#d8e5dc; --bldg:#c3d3cf; --bldg-2:#adc2bd;
+  --zr-ink:#3b3e43; --zr-muted:#7a7f85;
   --font:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0d1b1c; --card:#152a2c; --ink:#e6f1ef; --muted:#9bb3b1; --line:#27403f;
   --teal:#3cc4b4; --teal-soft:#16413f; --gold:#f2b83a; --gold-soft:#463816;
-  --good:#52c985; --good-soft:#173d28; --bad:#f08a55; --bad-soft:#44241a; --coffee:#d9a77e; --coffee-soft:#3a2a1f;
+  --good:#52c985; --good-soft:#173d28; --bad:#f08a55; --bad-soft:#44241a; --coffee:#d9a77e; --coffee-soft:#3a2a1f; --zr-ink:#e3e5e8; --zr-muted:#a3a8ae;
   --road:#2b3638; --road-edge:#1b2425; --lane:#c9c4ae; --ground-a:#12282a; --ground-b:#163033; --bldg:#24403f; --bldg-2:#2c4d4b; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0d1b1c; --card:#152a2c; --ink:#e6f1ef; --muted:#9bb3b1; --line:#27403f;
   --teal:#3cc4b4; --teal-soft:#16413f; --gold:#f2b83a; --gold-soft:#463816;
-  --good:#52c985; --good-soft:#173d28; --bad:#f08a55; --bad-soft:#44241a; --coffee:#d9a77e; --coffee-soft:#3a2a1f;
+  --good:#52c985; --good-soft:#173d28; --bad:#f08a55; --bad-soft:#44241a; --coffee:#d9a77e; --coffee-soft:#3a2a1f; --zr-ink:#e3e5e8; --zr-muted:#a3a8ae;
   --road:#2b3638; --road-edge:#1b2425; --lane:#c9c4ae; --ground-a:#12282a; --ground-b:#163033; --bldg:#24403f; --bldg-2:#2c4d4b; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -43,6 +46,30 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .brand{font-weight:800;font-size:17px;letter-spacing:-.01em}
 .brand small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
+.brandbox{display:flex;align-items:center;gap:9px;min-width:0}
+.zr-logo{flex:0 0 auto;display:block;border-radius:10px;box-shadow:0 0 0 1px var(--line)}
+.zr{color:var(--zr-ink);font-weight:800;letter-spacing:.02em} .zr-by{color:var(--zr-muted);font-weight:600}
+.looknow{display:flex;gap:12px;align-items:center}
+.ladder{display:flex;gap:2px;justify-content:space-between;margin:6px 0 4px;padding:6px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg)}
+.ladder div{flex:1;min-width:0;display:flex;justify-content:center;border-radius:8px} .ladder svg{width:100%;height:auto} .ladder .on{background:var(--gold-soft);outline:2px solid var(--gold)}
+.promo-av{display:flex;justify-content:center;margin:6px 0 -4px}
+svg .av-spark{transform-box:fill-box;transform-origin:center}
+#avatar .av-fig,#avatar .av-l1,#avatar .av-l2,#avatar .av-body,#avatar .av-head{transform-box:fill-box;transform-origin:50% 100%}
+@media (prefers-reduced-motion:no-preference){
+ #avatar .av-body,#avatar .av-head{animation:breathe 2.6s ease-in-out infinite}
+ #avatar.walking .av-fig{animation:hop .32s ease-in-out infinite}
+ #avatar.walking .av-l1{transform-origin:50% 0;animation:legA .32s ease-in-out infinite}
+ #avatar.walking .av-l2{transform-origin:50% 0;animation:legA .32s ease-in-out infinite reverse}
+ .av-aura{animation:pulse 2.2s ease-in-out infinite}
+ .av-spark{animation:tw 1.6s ease-in-out infinite}
+ #avatar.promo .av-fig{animation:pop 1.3s ease-out}
+ #avatar .av-burst{transform-box:fill-box;transform-origin:center;animation:burst 1.1s ease-out forwards}
+ .promo-av svg{animation:pop 1.3s ease-out}}
+@keyframes breathe{50%{transform:translateY(-.8px)}} @keyframes hop{50%{transform:translateY(-3px)}}
+@keyframes legA{0%,100%{transform:rotate(16deg)}50%{transform:rotate(-16deg)}}
+@keyframes tw{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1.15)}}
+@keyframes pop{0%{transform:scale(1)}30%{transform:scale(1.55)}55%{transform:scale(.92)}75%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes burst{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(2.6)}}
 .lang{display:flex;border:1.5px solid var(--line);border-radius:99px;overflow:hidden;background:var(--card);flex:0 0 auto}
 .lang button{border:0;background:none;color:var(--muted);font:700 13px var(--font);padding:6px 11px;cursor:pointer}
 .lang button[aria-pressed="true"]{background:var(--teal);color:#fff}
@@ -130,7 +157,7 @@ svg.chart{width:100%;height:auto;display:block} svg.chart text{fill:var(--muted)
 <div class="wrap">
   <header class="top">
     <div class="row">
-      <div class="brand">Economics Arena<small id="crumb"></small></div>
+      <div class="brandbox"><svg class="zr-logo" viewBox="0 0 40 40" width="38" height="38" role="img" aria-label="ZenRoad"><rect width="40" height="40" rx="10" fill="#3b3e43"/><path d="M28.6 9.2 A13 13 0 1 0 33 19.5" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round"/><path d="M14.5 34 C14 26 25.5 24.5 21.5 17.5 S22 9.5 27 7" fill="none" stroke="#b9bec3" stroke-width="6" stroke-linecap="round"/><path d="M14.5 34 C14 26 25.5 24.5 21.5 17.5 S22 9.5 27 7" fill="none" stroke="#ffffff" stroke-width="1.1" stroke-dasharray="2.2 2.6"/></svg><div class="brand">Economics Arena<small><b class="zr">ZenRoad</b> · <span class="zr-by">@chuonghn</span></small><small id="crumb"></small></div></div>
       <div class="lang" role="group" aria-label="Language / Ngôn ngữ"><button data-lang="vi" aria-pressed="true">VI</button><button data-lang="en" aria-pressed="false">EN</button></div>
     </div>
     <div class="hud"><span class="pill rank" id="rank"></span><span class="pill xp" id="xp"></span><span class="pill cap" id="cap"></span><span class="pill" id="road-pill"></span><span class="pill" id="cloud-pill"></span></div>
@@ -143,7 +170,7 @@ svg.chart{width:100%;height:auto;display:block} svg.chart text{fill:var(--muted)
 <div class="frame" id="frame" hidden><div class="fbar"><b id="frame-title"></b><button class="btn ghost" data-act="closeframe" id="frame-close"></button></div><iframe id="frame-if" title="Mini game"></iframe></div>
 <div class="overlay" id="ov" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 <div class="login" id="login" hidden><form class="lg-card" id="lg-form" autocomplete="on">
-  <div class="eyebrow">Economics Arena · BEE1037</div><h1 id="lg-title">Đăng nhập vào lớp</h1><p class="muted" id="lg-sub"></p>
+  <div class="brandbox"><svg class="zr-logo" viewBox="0 0 40 40" width="44" height="44" role="img" aria-label="ZenRoad"><rect width="40" height="40" rx="10" fill="#3b3e43"/><path d="M28.6 9.2 A13 13 0 1 0 33 19.5" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round"/><path d="M14.5 34 C14 26 25.5 24.5 21.5 17.5 S22 9.5 27 7" fill="none" stroke="#b9bec3" stroke-width="6" stroke-linecap="round"/><path d="M14.5 34 C14 26 25.5 24.5 21.5 17.5 S22 9.5 27 7" fill="none" stroke="#ffffff" stroke-width="1.1" stroke-dasharray="2.2 2.6"/></svg><div class="brand">Economics Arena<small><b class="zr">ZenRoad</b> · <span class="zr-by">@chuonghn</span></small></div></div><h1 id="lg-title">Đăng nhập vào lớp</h1><p class="muted" id="lg-sub"></p>
   <label for="lg-name" id="lg-name-l">Họ và tên</label><input id="lg-name" name="username" autocomplete="username" required>
   <label for="lg-code" id="lg-code-l">Mã đăng nhập</label><input id="lg-code" name="password" type="password" autocomplete="current-password" required>
   <p class="fb bad" id="lg-err" hidden></p><button class="btn" id="lg-go" type="submit">Vào lớp</button></form></div>
@@ -163,7 +190,7 @@ function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(M
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 // the web release has no bank.js: questions come from the server (see QUESTION SOURCE)
 
-/* ================= WORLDS: UEL BEE1037 chapters ================= */
+/* ================= WORLDS: UEL Microeconomics chapters ================= */
 var WORLDS=[
  {t:V('Kinh tế học và vấn đề cơ bản','Economics and the basic problem'),road:V('Hẻm nhỏ','Small alley'),rank:V('Xe đẩy cà phê','Coffee cart'),lanes:1},
  {t:V('Cung cầu và chính sách','Supply, demand and policy'),road:V('Phố chợ','Market street'),rank:V('Quán cà phê','Cafe'),lanes:2},
@@ -420,9 +447,11 @@ var API=String(window.ARENA_API||'').trim(),SHEETS=!!API;
 if(SHEETS)cloud.runtime=true;
 cloud.nameMap={};
 var sess=null;try{sess=JSON.parse(localStorage.getItem('arena-session')||'null');}catch(e){}
+function saveSess(){try{localStorage.setItem('arena-session',JSON.stringify(sess));}catch(e){}}
+function takeWt(res){if(sess&&res&&res.wt&&res.wt!==sess.wt){sess.wt=res.wt;saveSess();}}
 function api(action,data){return fetch(API,{method:'POST',body:JSON.stringify(Object.assign({action:action,token:sess&&sess.token},data||{}))}).then(function(r){return r.json();});}
 function sheetsStart(res){
-  cloud.owner=sess.role==='teacher';cloud.uid=sess.id;cloud.db={sheets:true};cloud.bankInfo=res.bankInfo||cloud.bankInfo||null;cloud.cfg=res.cfg||{};cloud.seats=res.seats;cloud.mode='on';cloud.nameMap[sess.id]=sess.name;
+  takeWt(res);cloud.owner=sess.role==='teacher';cloud.uid=sess.id;cloud.db={sheets:true};cloud.bankInfo=res.bankInfo||cloud.bankInfo||null;cloud.cfg=res.cfg||{};cloud.seats=res.seats;cloud.mode='on';cloud.nameMap[sess.id]=sess.name;
   if(S.uid&&S.uid!==sess.id)S=fresh();          // a different person's save on this device
   var st=res.state;
   if(st&&(st.updated||0)>(S.updated||0))S=normalize(st);
@@ -453,8 +482,7 @@ function doLogin(){
   api('login',{name:name,code:code}).then(function(res){
     btn.disabled=false;
     if(!res.ok){showLogin(res.error==='locked'?L('Sai quá nhiều lần. Thử lại sau 10 phút.','Too many wrong tries. Try again in 10 minutes.'):L('Tên hoặc mã chưa đúng. Kiểm tra lại với giáo viên.','That name or code is not right. Check with your teacher.'));return;}
-    sess={token:res.token,id:res.me.id,name:res.me.name,role:res.me.role};
-    try{localStorage.setItem('arena-session',JSON.stringify(sess));}catch(e){}
+    sess={token:res.token,id:res.me.id,name:res.me.name,role:res.me.role,wt:res.wt||''};saveSess();
     el('lg-code').value='';el('login').hidden=true;document.body.classList.remove('locked');
     sheetsStart(res);toast(L('Xin chào, ','Welcome, ')+res.me.name+'!');
   },function(){btn.disabled=false;showLogin(L('Không kết nối được máy chủ. Kiểm tra mạng và thử lại.','Cannot reach the server. Check your connection and try again.'));});
@@ -468,7 +496,7 @@ function logout(expired){
 function sheetsPush(body){
   api('save',{body:body}).then(function(res){
     cloud.saving=false;
-    if(res.ok){cloud.cfg=res.cfg||cloud.cfg;cloud.last=Date.now();cloud.mode='on';}
+    if(res.ok){takeWt(res);cloud.cfg=res.cfg||cloud.cfg;cloud.last=Date.now();cloud.mode='on';}
     else if(res.error==='reset'){cloud.cfg=res.cfg;doReset();return;}
     else if(res.error==='auth'){logout(true);return;}
     hud();if(cloud.again){cloud.again=false;cloudPush();}
@@ -481,7 +509,7 @@ function sheetsBoard(){
 function sheetsDash(){
   return api('dash').then(function(res){if(!res.ok)return;cloud.players=res.players;cloud.missedText=res.missedText||{};cloud.cfg=res.cfg;cloud.seats=res.seats;res.players.forEach(function(p){cloud.nameMap[p.id]=p.name;});if(P&&P.kind==='dash')renderDash();});
 }
-function sheetsHello(){if(!SHEETS||!sess||cloud.mode==='local')return;api('hello').then(function(res){if(res.ok){cloud.cfg=res.cfg;applyConfig();panel();}else if(res.error==='auth')logout(true);},function(){});}
+function sheetsHello(){if(!SHEETS||!sess||cloud.mode==='local')return;api('hello').then(function(res){if(res.ok){takeWt(res);cloud.cfg=res.cfg;applyConfig();panel();}else if(res.error==='auth')logout(true);},function(){});}
 function saveFile(name,text){
   var go=function(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);};
   if(SHEETS||!cloud.runtime){go();return;}
@@ -492,7 +520,17 @@ function saveFile(name,text){
 /* ================= BANK HELPERS ================= */
 /* ================= QUESTION SOURCE =================
    Local: bank.js + bankcore.js in the page (claude.ai build); answer keys kept in this closure.
-   Remote: the web release — no bank in the page; the Google server picks questions and checks answers. */
+   Remote: the web release — no bank in the page; the Google server picks questions and checks answers.
+   Fast (Release 2): config.js also sets window.ARENA_FAST to a Cloudflare Worker that picks and checks in ~0.2 s.
+   The Worker returns each answer key sealed (unreadable here); this closure keeps the sealed keys per play. */
+var FAST=SHEETS?String(window.ARENA_FAST||'').trim():'';
+function fastCall(action,data,again){
+  return fetch(FAST,{method:'POST',body:JSON.stringify(Object.assign({action:action,wt:sess&&sess.wt},data||{}))}).then(function(r){return r.json();}).then(function(res){
+    // pass expired or position out of date (a save still in flight) → fetch a fresh pass from the Sheet once, then retry
+    if(!again&&sess&&(res.error==='wauth'||res.error==='locked'))return api('hello').then(function(h){
+      if(h.ok&&h.wt){takeWt(h);return fastCall(action,data,true);}return h.error==='auth'?{ok:false,error:'auth'}:res;},function(){return res;});
+    if(res.error==='wauth')res.error='auth';return res;});
+}
 var Bank=(function(){
   if(window.ARENA_BANK&&window.BankCore&&!SHEETS){
     var keys={},seq=0,items=window.ARENA_BANK.items,vocab=window.ARENA_BANK.vocab;
@@ -510,6 +548,23 @@ var Bank=(function(){
       npcCheck:function(play,ans){return done(keys[play]?BankCore.single(keys[play],ans):{error:'expired'});},
       info:function(){return {n:items.length,news:items.filter(function(q){return q.src==='v1_new';}).length,vocab:vocab.length};},
       text:function(id){return byId[id]||null;}};
+  }
+  if(FAST){
+    var fk={},fseq=0,fput=function(ks){var id='f'+(++fseq);fk[id]=ks;return id;};
+    var start=function(action,data,one){return fastCall(action,data).then(function(res){if(res.ok){res.play=fput(one?[res.key]:res.keys);delete res.keys;delete res.key;}return res;});};
+    var use=function(play,i,action,data){var ks=fk[play];if(!ks||!ks[i])return Promise.resolve({ok:false,error:'expired'});
+      return fastCall(action,Object.assign({key:ks[i]},data)).then(function(res){if(res.key){ks[i]=res.key;delete res.key;}return res;});};
+    return {local:false,fast:true,
+      stage:function(node){return start('stage',{node:node});},
+      check:function(play,i,ans){return use(play,i,'check',{answer:ans});},
+      hint:function(play,i){return use(play,i,'hint',{});},
+      boss:function(node){return start('boss',{node:node});},
+      bossCheck:function(play,i,ans){return use(play,i,'bossCheck',{answer:ans});},
+      npc:function(o){return start('npc',o,true);},
+      npcHint:function(play){return use(play,0,'npcHint',{});},
+      npcCheck:function(play,ans){return use(play,0,'npcCheck',{answer:ans});},
+      info:function(){return cloud.bankInfo||null;},
+      text:function(id){return (cloud.missedText||{})[id]||null;}};
   }
   if(SHEETS)return {local:false,
     stage:function(node){return api('stage',{node:node});},
@@ -532,30 +587,82 @@ function bankError(res){
     :L('Không kết nối được máy chủ. Kiểm tra mạng và thử lại.','Cannot reach the server. Check your connection and try again.');
 }
 function playLoading(title){el('play-title').innerHTML=esc(title);playHud();el('play-body').innerHTML='<p class="loading muted">'+L('Đang lấy câu hỏi…','Fetching questions…')+'</p>';el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button>';}
-function playFail(res){if(res&&res.error==='auth'&&SHEETS){closePlay();logout(true);return;}el('play-body').innerHTML='<div class="fb bad">'+bankError(res)+'</div>';}
+function playFail(res){if(res&&res.error==='auth'&&SHEETS){closePlay();logout(true);return;}
+  var d=res&&res.detail,extra='';
+  if(d)extra='<p class="small" style="margin-top:8px">'+L('Máy chủ tìm thấy các trang: ','Tabs the server found: ')+'<b>'+esc((d.tabs||[]).join(', ')||'—')+'</b><br>'+
+    (d.bankTab?L('Trang ngân hàng: ','Bank tab: ')+'<b>'+esc(d.bankTab)+'</b> · '+d.bankRows+L(' dòng, đọc được ',' rows, readable ')+d.items+L(' câu',' questions'):L('Không có trang nào tên "Bank". Nhập bank_import.xlsx vào CHÍNH Google Sheet này, chọn "Chèn trang tính mới".','No tab named "Bank". Import bank_import.xlsx into THIS Google Sheet with "Insert new sheet(s)".'))+'</p>';
+  el('play-body').innerHTML='<div class="fb bad">'+bankError(res)+extra+'</div>';}
 var netFail=function(){return {ok:false,error:'network'};};
 
 function qText(q){return esc(q.q);} // bank text is Vietnamese only (EN pending translation)
 function viBadge(){return lang==='en'?'<span class="tag vi">VI only</span>':'';}
 
+/* ================= CHARACTER (Version 2): the owner's look improves with every rank; pips = stops cleared in this chapter ================= */
+var LOOKS=[
+ {n:V('Người khởi nghiệp','Starter'),shirt:'#6b8aa3',pants:'#3c4852',ring:'#9aa7ad'},
+ {n:V('Chủ xe đẩy cà phê','Coffee-cart owner'),shirt:'#f4f1ea',pants:'#3c4852',apron:'#7a4a2a',ring:'#b87333',prop:'cart'},
+ {n:V('Chủ quán cà phê','Cafe owner'),shirt:'#f4f1ea',pants:'#33414a',apron:'#7a4a2a',cap:'#0f766e',ring:'#b87333',prop:'cup'},
+ {n:V('Quản lý chuỗi','Chain manager'),shirt:'#0f766e',pants:'#2b3a42',badge:1,ring:'#b8c4cc',prop:'tray'},
+ {n:V('Chủ xưởng rang','Master roaster'),shirt:'#f4f1ea',vest:'#5b3a22',pants:'#2b3a42',ring:'#b8c4cc',prop:'sack'},
+ {n:V('Giám đốc công ty','Company director'),shirt:'#ffffff',suit:'#1f3a5f',tie:'#0f766e',pants:'#1f3a5f',ring:'#e8a317',prop:'case'},
+ {n:V('Thương hiệu dẫn đầu','Market leader'),shirt:'#ffffff',suit:'#16304f',tie:'#e8a317',pants:'#16304f',ring:'#e8a317',pin:1,aura:1,prop:'case'},
+ {n:V('Chủ tịch tập đoàn','Group chair'),shirt:'#ffffff',suit:'#23262b',tie:'#e8a317',pants:'#23262b',ring:'#f2d06b',pin:1,aura:2,cape:'#b3261e',crown:1,prop:'trophy'}
+];
+function lookIndex(){return rankIndex()+1;}
+function lookPips(){var w=worldNow(),n=0;NODES.forEach(function(nd){if(nd.w===w&&cleared(nd.id))n++;});return n;}
+function avatarSVG(t,pips){
+  var K=LOOKS[t],s='',skin='#f0c49c',top=K.suit||K.shirt;
+  if(K.aura)s+='<circle class="av-aura" cy="-5" r="'+(K.aura>1?25:22)+'" fill="'+K.ring+'" opacity="'+(K.aura>1?.34:.24)+'"/>';
+  s+='<ellipse cy="16" rx="15" ry="4.6" fill="'+K.ring+'"/><ellipse cy="15.2" rx="10.5" ry="2.8" fill="rgba(0,0,0,.28)"/>';
+  for(var i=0;i<6;i++){var a=Math.PI*(0.92-0.84*i/5);s+='<circle cx="'+(13.2*Math.cos(a)).toFixed(1)+'" cy="'+(16+3.9*Math.sin(a)).toFixed(1)+'" r="1.25" fill="'+(i<(pips||0)?'#fff':'rgba(0,0,0,.25)')+'"/>';}
+  s+='<g class="av-fig">';
+  if(K.cape)s+='<path d="M-8 -7 L8 -7 L13 13 Q0 16 -13 13 Z" fill="'+K.cape+'"/><path d="M-8 -7 L8 -7 L9 -4 L-9 -4Z" fill="#e8a317"/>';
+  if(K.prop==='cart')s+='<g transform="translate(13 4) scale(.82)"><rect x="-1" y="-5" width="15" height="10" rx="2" fill="#c98a4b" stroke="#7a4a2a" stroke-width="1.2"/><path d="M-2 -5 L15 -5 L13 -10 L0 -10Z" fill="#e8a317"/><circle cx="2.5" cy="7.5" r="2.6" fill="#2f3a3c"/><circle cx="10.5" cy="7.5" r="2.6" fill="#2f3a3c"/><rect x="4" y="-3" width="5" height="5" rx="1" fill="#fff"/></g>';
+  if(K.prop==='sack')s+='<g transform="translate(15 6)"><path d="M-5 9 Q-7 0 -3 -4 L3 -4 Q7 0 5 9Z" fill="#c9a56b" stroke="#7a5a2a" stroke-width="1"/><circle cx="-1" cy="3" r="1.3" fill="#5b3a22"/><circle cx="2" cy="5" r="1.3" fill="#5b3a22"/></g>';
+  s+='<g class="av-l1"><rect x="-5.6" y="5" width="4.6" height="10" rx="2" fill="'+K.pants+'"/><ellipse cx="-3.4" cy="15.2" rx="3.4" ry="1.7" fill="#1d2326"/></g>';
+  s+='<g class="av-l2"><rect x="1" y="5" width="4.6" height="10" rx="2" fill="'+K.pants+'"/><ellipse cx="3.4" cy="15.2" rx="3.4" ry="1.7" fill="#1d2326"/></g>';
+  s+='<g class="av-body">';
+  s+='<rect x="-11.2" y="-6" width="4" height="11" rx="2" fill="'+top+'"/><rect x="7.2" y="-6" width="4" height="11" rx="2" fill="'+top+'"/><circle cx="-9.2" cy="5.6" r="2.1" fill="'+skin+'"/><circle cx="9.2" cy="5.6" r="2.1" fill="'+skin+'"/>';
+  s+='<rect x="-8" y="-7.5" width="16" height="14.5" rx="4" fill="'+top+'"/>';
+  if(K.suit)s+='<path d="M-3.4 -7.5 L3.4 -7.5 L0 -0.5Z" fill="'+K.shirt+'"/><path d="M0 -6.6 L1.7 -3.6 L0 3.4 L-1.7 -3.6Z" fill="'+K.tie+'"/><path d="M-3.4 -7.5 L-1 -1.5 M3.4 -7.5 L1 -1.5" stroke="rgba(255,255,255,.35)" stroke-width=".8"/>';
+  if(K.vest)s+='<path d="M-7 -6 L-2.5 -6 L0 0 L2.5 -6 L7 -6 L7 6 L-7 6Z" fill="'+K.vest+'"/><circle cx="0" cy="2" r=".8" fill="#e8a317"/><circle cx="0" cy="4.4" r=".8" fill="#e8a317"/>';
+  if(K.apron)s+='<rect x="-6" y="-3" width="12" height="12" rx="2" fill="'+K.apron+'"/><path d="M-4.5 -3 L-3 -7.5 M4.5 -3 L3 -7.5" stroke="'+K.apron+'" stroke-width="1.3"/><rect x="-3" y="2" width="6" height="3" rx="1" fill="rgba(255,255,255,.25)"/>';
+  if(K.badge)s+='<rect x="1.5" y="-4.5" width="4.5" height="2.6" rx=".6" fill="#fff"/><path d="M-2 -7.5 L0 -4.5 L2 -7.5" fill="none" stroke="#fff" stroke-width="1"/>';
+  if(K.pin)s+='<path d="M-4.6 -5.6 l.7 1.5 1.6 .2 -1.2 1.1 .3 1.6 -1.4 -.8 -1.4 .8 .3 -1.6 -1.2 -1.1 1.6 -.2Z" fill="#f2d06b"/>';
+  if(K.prop==='cup')s+='<g transform="translate(-9.5 3)"><path d="M-2.6 -3 L2.6 -3 L2 2.6 L-2 2.6Z" fill="#fff" stroke="#7a4a2a" stroke-width=".8"/><path d="M-1 -4.6 q1 -1 0 -2 M1 -4.6 q1 -1 0 -2" stroke="#9bb3b1" stroke-width=".7" fill="none"/></g>';
+  if(K.prop==='tray')s+='<g transform="translate(8.5 1.5)"><rect x="-1" y="2.5" width="13" height="1.8" rx=".9" fill="#7d8b91"/>'+[0,4.2,8.4].map(function(x){return '<rect x="'+x+'" y="-2.6" width="3.2" height="5" rx=".7" fill="#fff" stroke="#7a4a2a" stroke-width=".8"/>';}).join('')+'</g>';
+  if(K.prop==='case')s+='<g transform="translate(12 6)"><rect x="-4" y="0" width="9" height="7" rx="1.4" fill="#5b3a22"/><path d="M-1.5 0 v-1.6 h4 v1.6" fill="none" stroke="#5b3a22" stroke-width="1.1"/><rect x="0" y="3" width="1.6" height="1.2" fill="#e8a317"/></g>';
+  if(K.prop==='trophy')s+='<g transform="translate(12 -1)"><path d="M-3.5 -3 h7 v2.5 a3.5 3.5 0 0 1 -7 0Z" fill="#f2d06b" stroke="#b8860b" stroke-width=".7"/><rect x="-.8" y="2.5" width="1.6" height="2.6" fill="#b8860b"/><rect x="-2.6" y="5" width="5.2" height="1.6" rx=".5" fill="#b8860b"/></g>';
+  s+='</g>';
+  s+='<g class="av-head"><circle cy="-15" r="7.6" fill="'+skin+'"/><path d="M-7.6 -15.5 A7.6 7.6 0 0 1 7.6 -15.5 Q4 -18.5 0 -18 Q-4 -18 -7.6 -15.5Z" fill="#2b1d14"/>'+
+    '<circle cx="-2.6" cy="-14.4" r="1" fill="#222"/><circle cx="2.6" cy="-14.4" r="1" fill="#222"/><path d="M-2.6 -11.4 Q0 -9.4 2.6 -11.4" stroke="#7a3b2a" stroke-width="1" fill="none" stroke-linecap="round"/>';
+  if(K.cap)s+='<path d="M-7.8 -16.5 A7.8 7 0 0 1 7.8 -16.5Z" fill="'+K.cap+'"/><rect x="-1" y="-17.6" width="11" height="2.2" rx="1.1" fill="'+K.cap+'"/>';
+  if(K.crown)s+='<path d="M-6 -21 L-6 -26 L-3 -23.2 L0 -27.5 L3 -23.2 L6 -26 L6 -21Z" fill="#f2d06b" stroke="#b8860b" stroke-width=".8"/><circle cy="-23.3" r="1" fill="#b3261e"/>';
+  s+='</g></g>';
+  if(K.aura>1)[[-17,-20],[18,-14],[-15,4]].forEach(function(p,i){s+='<path class="av-spark" style="animation-delay:'+(i*0.5)+'s" d="M'+p[0]+' '+(p[1]-3.5)+' l1 2.5 2.5 1 -2.5 1 -1 2.5 -1 -2.5 -2.5 -1 2.5 -1Z" fill="#f2d06b"/>';});
+  return s;
+}
+function avatarBig(t,size,dim){return '<svg viewBox="-27 -31 56 52" width="'+size+'" height="'+Math.round(size*52/56)+'" aria-hidden="true"'+(dim?' style="opacity:.28;filter:grayscale(1)"':'')+'>'+avatarSVG(t,dim?0:6)+'</svg>';}
+
 /* ================= MAP GEOMETRY + DRAW ================= */
-var VW=360,GAP=118,PADB=90,PADT=110,H=PADT+PADB+(N-1)*GAP;
+var VW=360,GAP=118,PADB=90,PADT=205,AVY=42,H=PADT+PADB+(N-1)*GAP;
 function cx(t){return VW/2+78*Math.sin(t*0.82);}
 function cy(t){return H-PADB-t*GAP;}
 function lanesAt(t){return WORLDS[Math.max(0,Math.min(WORLDS.length-1,Math.floor((t+0.5)/6)))].lanes;}
 function roadW(n){return 30+16*n;}
 function rng(s){var x=Math.sin(s*999.13)*43758.5453;return x-Math.floor(x);}
 function worldNow(){return NODES[S.pos].w;}
+var lastLook=null;
 function draw(){
   var svg=el('road'),s='',W=VW;
   svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('aria-label',L('Bản đồ con đường kinh doanh','Business road map'));
-  WORLDS.forEach(function(w,wi){var y1=cy(wi*6-0.5),y2=cy(wi*6+5.5);s+='<rect x="0" y="'+Math.min(y1,y2)+'" width="'+W+'" height="'+Math.abs(y1-y2)+'" fill="'+(wi%2?'var(--ground-b)':'var(--ground-a)')+'"/>';});
+  WORLDS.forEach(function(w,wi){var y1=cy(wi*6-0.5),y2=wi===WORLDS.length-1?0:cy(wi*6+5.5);s+='<rect x="0" y="'+Math.min(y1,y2)+'" width="'+W+'" height="'+Math.abs(y1-y2)+'" fill="'+(wi%2?'var(--ground-b)':'var(--ground-a)')+'"/>';});
   for(var i=0;i<N;i++){var w=NODES[i].w,count=1+Math.floor(w/2);
     for(var b=0;b<count;b++){var side=(i+b)%2?1:-1,t=i+rng(i*7+b)*0.9-0.45,bh=14+w*8+rng(i*3+b)*18,bw=16+rng(i+b*5)*14;
       var edge=cx(t)+side*(roadW(lanesAt(t))/2+12+b*4),x=side>0?edge+rng(i*11+b)*20:edge-bw-rng(i*11+b)*20;
       if(x<2||x+bw>W-2)continue;s+='<rect x="'+x.toFixed(1)+'" y="'+(cy(t)-bh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="2" fill="'+(b%2?'var(--bldg-2)':'var(--bldg)')+'"/>';}}
   WORLDS.forEach(function(wd,wi){
-    var t0=Math.max(-0.6,wi*6-0.5),t1=Math.min(N-1+0.6,wi*6+5.5),d='',rw=roadW(wd.lanes);
+    var t0=Math.max(-0.6,wi*6-0.5),t1=wi===WORLDS.length-1?N-1+1.6:wi*6+5.5,d='',rw=roadW(wd.lanes);
     for(var t=t0;t<=t1+0.001;t+=0.1)d+=(t===t0?'M':'L')+cx(t).toFixed(1)+' '+cy(t).toFixed(1);
     s+='<path d="'+d+'" fill="none" stroke="var(--road-edge)" stroke-width="'+(rw+6)+'"/><path d="'+d+'" fill="none" stroke="var(--road)" stroke-width="'+rw+'"/>';
     for(var k=1;k<wd.lanes;k++){var dx=-rw/2+rw*k/wd.lanes;s+='<path d="'+d+'" transform="translate('+dx.toFixed(1)+' 0)" fill="none" stroke="var(--lane)" stroke-width="2" stroke-dasharray="10 12" opacity=".8"/>';}
@@ -578,7 +685,9 @@ function draw(){
   S.npcs.forEach(function(n){var x=cx(n.t)+n.dx,y=cy(n.t),T=NPC[n.type];
     s+='<g class="npc" data-npc="'+n.id+'" role="button" tabindex="0" aria-label="'+tx(T.name)+'"><g class="bob"><circle cx="'+x+'" cy="'+y+'" r="15" fill="var(--card)" stroke="'+(T.rare?'var(--gold)':'var(--teal)')+'" stroke-width="'+(T.rare?3:2)+'"/><text x="'+x+'" y="'+(y+6)+'" text-anchor="middle" font-size="16">'+T.face+'</text><circle cx="'+(x+11)+'" cy="'+(y-11)+'" r="5" fill="var(--gold)"/><text x="'+(x+11)+'" y="'+(y-8.5)+'" text-anchor="middle" font-size="8" font-weight="800" fill="#fff">!</text></g></g>';});
   var gear=SHOP.filter(function(it){return S.owned.indexOf(it.id)>=0;}).map(function(it){return it.face;}).join('');
-  s+='<g id="avatar" pointer-events="none" transform="translate('+cx(S.pos).toFixed(1)+' '+(cy(S.pos)-34).toFixed(1)+')"><circle r="15" fill="var(--ink)"/><text y="6" text-anchor="middle" font-size="17">🧑‍💼</text>'+(gear?'<rect x="'+(-gear.length*5-6)+'" y="-38" width="'+(gear.length*10+12)+'" height="20" rx="10" fill="var(--card)" stroke="var(--gold)" stroke-width="1.5"/><text y="-23" text-anchor="middle" font-size="12">'+gear+'</text>':'')+'</g>';
+  var look=lookIndex(),promo=lastLook!==null&&look>lastLook;lastLook=look;
+  s+='<g id="avatar" class="'+(promo?'promo':'')+'" pointer-events="none" transform="translate('+cx(S.pos).toFixed(1)+' '+(cy(S.pos)-AVY).toFixed(1)+')">'+(promo?'<circle class="av-burst" r="24" fill="none" stroke="var(--gold)" stroke-width="3"/>':'')+'<g transform="scale(1.4)">'+avatarSVG(look,lookPips())+'</g>'+(gear?'<rect x="'+(-gear.length*5-6)+'" y="-66" width="'+(gear.length*10+12)+'" height="20" rx="10" fill="var(--card)" stroke="var(--gold)" stroke-width="1.5"/><text y="-51" text-anchor="middle" font-size="12">'+gear+'</text>':'')+'</g>';
+  if(promo)setTimeout(function(){toast(L('Nhân vật mới: ','New look: ')+tx(LOOKS[look].n)+' ✨');},350);
   s+='<rect x="24" y="14" width="'+(W-48)+'" height="44" rx="12" fill="var(--card)" stroke="var(--teal)" stroke-width="1.5" stroke-dasharray="6 5"/><text x="'+(W/2)+'" y="33" text-anchor="middle" font-size="12" font-weight="800" fill="var(--teal)">'+L('VĨ MÔ · SẮP MỞ','MACRO · COMING NEXT')+'</text><text x="'+(W/2)+'" y="50" text-anchor="middle" font-size="11" fill="var(--muted)">'+L('Từ con đường ra bản đồ quốc gia, rồi thế giới','From the road out to the national map, then the world')+'</text>';
   svg.innerHTML=s;
 }
@@ -586,7 +695,7 @@ function hud(){
   document.documentElement.lang=lang;
   document.querySelectorAll('[data-lang]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});
   var w=WORLDS[worldNow()],r=rankIndex();
-  el('crumb').textContent=L('Vi mô · BEE1037 · Phiên bản 1','Micro · BEE1037 · Version 1')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
+  el('crumb').textContent=L('Vi mô · Phiên bản 2','Micro · Version 2')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
   el('rank').textContent=r<0?L('Khởi nghiệp','Starting out'):tx(WORLDS[r].rank);
   el('xp').textContent=S.xp+' XP';el('cap').textContent=L('Vốn ','Capital ')+fmt(S.cap)+'k';
   el('road-pill').textContent=tx(w.road)+' · '+S.npcs.length+' NPC';
@@ -660,6 +769,7 @@ function npcHint(){
 var shopMsg='';
 function renderShop(){
   var r=rankIndex(),h='<div class="who"><div class="face" aria-hidden="true">🏬</div><div><b>'+L('Cửa hàng','Shop')+'</b><span class="muted small">'+L('Vốn hiện có: ','Capital: ')+fmt(S.cap)+'k</span></div></div>';
+  h+=lookLadder();
   [['use',L('Vật phẩm dùng được','Items you use')],['up',L('Nâng cấp kinh doanh','Business upgrades')]].forEach(function(g){
     h+='<p class="eyebrow" style="margin:12px 0 6px">'+g[1]+'</p>';
     SHOP.filter(function(it){return it.kind===g[0];}).forEach(function(it){
@@ -669,12 +779,18 @@ function renderShop(){
   h+='<p class="muted small" style="margin-top:10px">'+L('Kiếm vốn bằng cách qua chặng và trả lời NPC trên đường.','Earn capital by clearing stages and answering NPCs on the road.')+'</p><div class="acts"><button class="btn" data-act="closesheet">'+L('Đóng','Close')+'</button></div>';
   el('sheet').innerHTML=h;
 }
+function lookLadder(){
+  var t=lookIndex(),nx=LOOKS[t+1],h='<p class="eyebrow" style="margin:12px 0 6px">'+L('Nhân vật của bạn','Your character')+'</p><div class="looknow">'+avatarBig(t,84)+'<div><b>'+tx(LOOKS[t].n)+'</b><br><span class="muted small">'+
+    (nx?L('Qua trùm Chương ','Beat the Chapter ')+(t+1)+L(' để thành ',' boss to become ')+'<b>'+tx(nx.n)+'</b>.':L('Diện mạo cao nhất. Chúc mừng!','The top look. Congratulations!'))+'<br>'+L('Chấm trắng dưới chân = mốc đã qua trong chương này.','White dots under the feet = stops cleared in this chapter.')+'</span></div></div><div class="ladder">';
+  LOOKS.forEach(function(k,i){h+='<div title="'+esc(tx(k.n))+'"'+(i===t?' class="on"':'')+'>'+avatarBig(i,40,i>t)+'</div>';});
+  return h+'</div>';
+}
 function buy(id){var it=SHOP.filter(function(x){return x.id===id;})[0];if(!it||S.cap<it.price||it.rank>rankIndex()||(it.kind==='up'&&S.owned.indexOf(id)>=0))return;
   S.cap-=it.price;if(it.kind==='use')S.inv[id]++;else S.owned.push(id);shopMsg=L('Đã mua: ','Bought: ')+tx(it.name);persist();renderShop();hud();draw();}
 function renderMenu(confirm){
   var bi=Bank&&Bank.info(),n=bi?bi.n:0,news=bi?bi.news:0;
   var h='<h3 class="q">'+L('Cài đặt','Settings')+'</h3>';
-  if(teacherAllowed()&&bi)h+='<p class="small">'+L('Ngân hàng: ','Bank: ')+'<b>'+n+'</b> '+L('câu: ',' questions: ')+(n-news)+' '+L('câu trắc nghiệm từ đề giữa kỳ, cuối kỳ và 3 bộ luyện tập của lớp BEE1037, cộng ','multiple-choice questions from the BEE1037 midterm, final and three practice sets, plus ')+news+L(' câu mới cho C4–C7 (bản nháp chờ thầy duyệt), ',' new draft questions for C4–C7 awaiting review, ')+bi.vocab+L(' thuật ngữ Việt–Anh.',' VI–EN terms.')+'</p>';
+  if(teacherAllowed()&&bi)h+='<p class="small">'+L('Ngân hàng: ','Bank: ')+'<b>'+n+'</b> '+L('câu: ',' questions: ')+(n-news)+' '+L('câu trắc nghiệm từ đề giữa kỳ, cuối kỳ và 3 bộ luyện tập của lớp, cộng ','multiple-choice questions from the class midterm, final and three practice sets, plus ')+news+L(' câu mới cho C4–C7 (bản nháp chờ thầy duyệt), ',' new draft questions for C4–C7 awaiting review, ')+bi.vocab+L(' thuật ngữ Việt–Anh.',' VI–EN terms.')+'</p>';
   if(teacherAllowed())h+='<p class="small muted">'+L('Câu hỏi hiện chỉ có tiếng Việt; giao diện có cả hai thứ tiếng.','Questions are in Vietnamese for now; the interface is bilingual.')+'</p>';
   h+='<p class="small">'+cloudPill()+(cloud.last?' · '+ago(cloud.last):'')+'</p>';
   if(SHEETS&&sess)h+='<div class="rowline"><span>'+L('Đăng nhập: ','Signed in: ')+'<b>'+esc(sess.name)+'</b>'+(sess.role==='teacher'?' · '+L('giáo viên','teacher'):'')+'</span><button class="btn ghost" style="padding:4px 10px;font-size:13px" data-act="logout">'+L('Đăng xuất','Sign out')+'</button></div>';
@@ -690,9 +806,9 @@ function renderMenu(confirm){
 var walking=false;
 function walk(){
   if(walking||S.pos>=N-1||!cleared(NODES[S.pos].id))return;walking=true;
-  var from=S.pos,to=S.pos+1,start=null,dur=matchMedia('(prefers-reduced-motion: reduce)').matches?1:900,av=el('avatar');
+  var from=S.pos,to=S.pos+1,start=null,dur=matchMedia('(prefers-reduced-motion: reduce)').matches?1:900,av=el('avatar');av.classList.add('walking');
   function step(ts){if(start===null)start=ts;var k=Math.min(1,(ts-start)/dur),t=from+(to-from)*(k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2);
-    av.setAttribute('transform','translate('+cx(t).toFixed(1)+' '+(cy(t)-34).toFixed(1)+')');follow(t);
+    av.setAttribute('transform','translate('+cx(t).toFixed(1)+' '+(cy(t)-AVY).toFixed(1)+')');follow(t);
     if(k<1)requestAnimationFrame(step);else{S.pos=to;walking=false;S.npcs=S.npcs.filter(function(n){return n.t>=S.pos-0.5;});spawnAhead();persist();renderMap();}}
   requestAnimationFrame(step);
 }
@@ -853,7 +969,7 @@ function bossResult(){
 function renderBossResult(){
   var won=P.res.won,st=P.res.st,first=P.res.first,w=WORLDS[P.node.w],nx=WORLDS[P.node.w+1];
   var h='<div class="card center"><div class="eyebrow">'+esc(tx(P.node.name))+'</div><h1>'+(won?L('Chốt thương vụ lớn!','Big deal closed!'):L('Thương vụ thất bại','The deal fell through'))+'</h1>'+starRow(st);
-  if(won&&first)h+='<p><b>'+L('Thăng cấp: ','Promoted: ')+tx(w.rank)+'</b>'+(nx?'<br>'+L('Đường mở rộng: ','The road widens: ')+tx(nx.road)+' · '+nx.lanes+L(' làn',' lanes'):'')+'</p>';
+  if(won&&first)h+='<div class="promo-av">'+avatarBig(P.node.w+1,120)+'</div><p><b>'+L('Thăng cấp: ','Promoted: ')+tx(w.rank)+'</b><br>'+L('Nhân vật mới: ','New look: ')+tx(LOOKS[P.node.w+1].n)+(nx?'<br>'+L('Đường mở rộng: ','The road widens: ')+tx(nx.road)+' · '+nx.lanes+L(' làn',' lanes'):'')+'</p>';
   if(!won)h+='<p class="muted">'+(P.lives<=0?L('Hết mạng. ','Out of lives. '):'')+L('Cần đúng ít nhất 60% và còn mạng. Mua vé đấu lại ở cửa hàng để có thêm mạng.','You need at least 60% with a life left. Buy a retry ticket in the shop for an extra life.')+'</p>';
   h+='<div class="kpis"><div class="kpi"><span>'+L('Đúng','Correct')+'</span><b>'+P.right+'/'+P.qs.length+'</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(won&&first?'+500k':'—')+'</b></div></div></div>';
   el('play-body').innerHTML=h;playHud();

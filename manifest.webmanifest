@@ -1,10 +1,10 @@
 {
- "name": "Economics Arena",
+ "name": "ZenRoad · Economics Arena",
  "short_name": "Econ Arena",
  "start_url": "./",
  "display": "standalone",
  "background_color": "#0d1b1c",
- "theme_color": "#0f766e",
+ "theme_color": "#3b3e43",
  "lang": "vi",
  "icons": [
   {
