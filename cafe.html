@@ -193,7 +193,7 @@ var L={
  hintE:{vi:'E = (ΔQ ÷ Q trung bình) ÷ (ΔP ÷ P trung bình). Doanh thu tăng khi giảm giá nếu % tăng số ly lớn hơn % giảm giá.',en:'E = (ΔQ ÷ average Q) ÷ (ΔP ÷ average P). Revenue rises after a price cut if the % rise in cups is bigger than the % fall in price.'},
  right:{vi:'Chính xác!',en:'Correct!'}, rightLate:{vi:'Đúng rồi, ở lần thử thứ hai.',en:'Right, on your second try.'},
  wrong:{vi:'Chưa đúng. Mục sai đã được đánh dấu. Bạn được thử lại một lần.',en:'Not quite. Wrong items are marked. You can try once more.'},
- failed:{vi:'Chưa đúng. Đáp án đúng đã được tô xanh.',en:'Not quite. The right answers are shown in green.'},
+ failed:{vi:'Chưa đúng. Game không hiện đáp án; chơi lại vòng này để thử với số liệu mới.',en:'Not quite. Answers are not shown; replay the round to try with new data.'},
  why:{vi:'Giải thích',en:'Why'},
  finishEarly:{vi:'Đạt mục tiêu! Kết thúc',en:'Goal reached! Finish'},
  seeDebrief:{vi:'Xem tổng kết',en:'See the debrief'},
@@ -342,13 +342,13 @@ function r1(){
     h+='<div class="card"><span class="tag">'+t('quizTitle')+'</span><p class="muted">'+t('quizIntro')+'</p>'+dayTable(s.days,true)+'</div><div class="card">';
     var ec=z.status==='answer'?'':(z.wrong.indexOf('e')<0?'ok':'no');
     h+='<div class="q"><p><b>'+t('qE')+'</b></p><div class="num"><input id="ein" type="number" inputmode="decimal" step="any" value="'+z.e+'" class="'+ec+'"'+(lock?' disabled':'')+' aria-label="|E|">'+
-       (lock&&z.wrong.indexOf('e')>=0?'<span>'+(lang==='vi'?'Đáp án: ':'Answer: ')+'<b>'+f2(z.key.e)+'</b></span>':'')+'</div>'+
-       (lock?'<div class="formula">E = ('+Math.abs(z.key.q2-z.key.q1)+' ÷ '+((z.key.q1+z.key.q2)/2)+') ÷ ('+Math.abs(z.key.p2-z.key.p1)+' ÷ '+((z.key.p1+z.key.p2)/2)+') = '+f2(z.key.e)+'</div>':'')+'</div>';
+'</div>'+
+       (lock&&!z.wrong.length?'<div class="formula">E = ('+Math.abs(z.key.q2-z.key.q1)+' ÷ '+((z.key.q1+z.key.q2)/2)+') ÷ ('+Math.abs(z.key.p2-z.key.p1)+' ÷ '+((z.key.p1+z.key.p2)/2)+') = '+f2(z.key.e)+'</div>':'')+'</div>';
     h+=optQ('cls',t('qC'),[['el',t('el')],['unit',t('unit')],['in',t('inel')]],z);
     h+=optQ('eff',t('qR'),[['up',t('up')],['flat',t('flat')],['down',t('down')]],z);
     if(z.hinted)h+='<div class="fb hint"><b>'+t('hintL')+'</b>'+t('hintE')+'</div>';
     if(z.status==='wrong')h+='<div class="fb bad">'+t('wrong')+'</div>';
-    if(lock)h+='<div class="fb '+(z.wrong.length?'bad':'good')+'"><b>'+(z.wrong.length?t('failed'):z.attempt===1?t('right'):t('rightLate'))+'</b>+'+z.gain+' XP<br>'+t('why')+': '+quizWhy(z.key)+'</div>';
+    if(lock)h+='<div class="fb '+(z.wrong.length?'bad':'good')+'"><b>'+(z.wrong.length?t('failed'):z.attempt===1?t('right'):t('rightLate'))+'</b>+'+z.gain+' XP'+(z.wrong.length?'':'<br>'+t('why')+': '+quizWhy(z.key))+'</div>';
     h+='</div></div>';
     el('app').innerHTML=h;
     el('actions').innerHTML=z.status==='answer'?'<button class="btn ghost" data-act="qhint"'+(z.hinted?' disabled':'')+'>'+t('hint')+'</button><button class="btn" data-act="qcheck"'+(qReady()?'':' disabled')+'>'+t('check')+'</button>'
@@ -376,7 +376,7 @@ function optQ(name,label,opts,z){
   opts.forEach(function(o){
     var c='';
     if(z.status==='answer'){if(z[name]===o[0])c=' sel';}
-    else{if(z[name]===o[0])c=z.wrong.indexOf(name)<0?' ok':' no';if(lock&&o[0]===z.key[name])c=' ok';}
+    else if(z[name]===o[0])c=z.wrong.indexOf(name)<0?' ok':' no';   // only the player's own pick is marked; the right option is never shown
     h+='<button class="opt'+c+'" data-act="qopt" data-q="'+name+'" data-v="'+o[0]+'"'+(z.status!=='answer'?' disabled':'')+'>'+o[1]+'</button>';
   });
   return h+'</div></div>';
@@ -399,7 +399,6 @@ function qCheck(){
   if(z.cls!==z.key.cls)w.push('cls');
   if(z.eff!==z.key.eff)w.push('eff');
   z.wrong=w;
-  if(w.length&&z.attempt===1){z.status='wrong';render();return;}
   var right=3-w.length,gain=right*10+(z.attempt===1?right*5:0)-(z.hinted?5:0);
   z.gain=Math.max(0,gain);S.xp+=z.gain;z.status='done';render();
 }
@@ -436,11 +435,11 @@ function r2(){
   }else if(s.phase==='cs'){
     var z=s.cs,p=s.chosen,lock=z.status==='done',ic=z.status==='answer'?'':(z.ok?'ok':'no');
     h+='<div class="card"><span class="tag">'+t('csT')+'</span><div class="kpis"><div class="kpi"><span>'+t('yourPrice')+'</span><b>'+p+'k</b></div><div class="kpi"><span>'+t('buyN')+'</span><b>'+buyers(p)+'</b></div><div class="kpi"><span>'+t('revenue')+'</span><b>'+k(rev2(p))+'</b></div></div></div>';
-    h+='<div class="card">'+stepChart(sortedW,p,lock)+'<p style="margin-top:10px"><b>'+t('csQ')+'</b></p><div class="num"><input id="csin" type="number" inputmode="decimal" step="any" value="'+z.val+'" class="'+ic+'"'+(lock?' disabled':'')+' aria-label="'+t('csT')+'"><span class="muted">k</span></div>';
+    h+='<div class="card">'+stepChart(sortedW,p,lock&&z.ok)+'<p style="margin-top:10px"><b>'+t('csQ')+'</b></p><div class="num"><input id="csin" type="number" inputmode="decimal" step="any" value="'+z.val+'" class="'+ic+'"'+(lock?' disabled':'')+' aria-label="'+t('csT')+'"><span class="muted">k</span></div>';
     if(z.hinted)h+='<div class="fb hint"><b>'+t('hintL')+'</b>'+t('csHint')+'</div>';
     if(z.status==='wrong')h+='<div class="fb bad">'+t('wrong')+'</div>';
     if(lock){var parts=CUST.filter(function(c){return c.w>=p;}).map(function(c){return '('+c.w+' − '+p+')';});
-      h+='<div class="fb '+(z.ok?'good':'bad')+'"><b>'+(z.ok?(z.attempt===1?t('right'):t('rightLate')):t('failed'))+'</b>+'+z.gain+' XP<div class="formula">CS = '+(parts.join(' + ')||'0')+' = '+cs(p)+'k</div></div>';}
+      h+='<div class="fb '+(z.ok?'good':'bad')+'"><b>'+(z.ok?(z.attempt===1?t('right'):t('rightLate')):t('failed'))+'</b>+'+z.gain+' XP'+(z.ok?'<div class="formula">CS = '+(parts.join(' + ')||'0')+' = '+cs(p)+'k</div>':'')+'</div>';}
     h+='</div></div>';
     el('app').innerHTML=h;
     el('actions').innerHTML=z.status==='answer'?'<button class="btn ghost" data-act="cshint"'+(z.hinted?' disabled':'')+'>'+t('hint')+'</button><button class="btn" data-act="cscheck"'+(z.val!==''&&!isNaN(parseFloat(z.val))?'':' disabled')+'>'+t('check')+'</button>'
@@ -527,7 +526,6 @@ document.addEventListener('click',function(e){
   else if(a==='cshint'){s2.cs.hinted=true;render();}
   else if(a==='cscheck'){
     var z2=s2.cs;z2.ok=Math.abs(parseFloat(z2.val)-cs(s2.chosen))<=0.5;
-    if(!z2.ok&&z2.attempt===1){z2.status='wrong';render();return;}
     z2.gain=Math.max(0,(z2.ok?10+(z2.attempt===1?5:0):0)-(z2.hinted?5:0));S.xp+=z2.gain;z2.status='done';render();
   }
   else if(a==='csretry'){s2.cs.attempt=2;s2.cs.status='answer';s2.cs.val='';render();}
