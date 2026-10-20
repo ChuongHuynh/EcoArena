@@ -38,7 +38,7 @@ var Market = (function () {
   var TEAMS = [{ vi: 'Đội Đỏ', en: 'Red', color: '#d64545' }, { vi: 'Đội Xanh dương', en: 'Blue', color: '#2f6fd6' }, { vi: 'Đội Vàng', en: 'Yellow', color: '#d9a400' },
                { vi: 'Đội Xanh lá', en: 'Green', color: '#2e9e5b' }, { vi: 'Đội Tím', en: 'Purple', color: '#8a4fd0' }, { vi: 'Đội Cam', en: 'Orange', color: '#e0782d' }];
   var BOTNAMES = ['Cà phê Mây', 'Quán Gió', 'Cà phê Nắng', 'Quán Sương', 'Cà phê Phố', 'Quán Ngõ'];
-  var MAXACT = 3, MAXLVL = 5, LOGN = 30;
+  var MAXACT = 3, MAXLVL = 5, LOGN = 30, TEAM_BOOST = 0.15, TEAM_ROUNDS = 2, TEAM_PASS = 60;
 
   function rnd(seed) { var t = seed >>> 0; return function () { t += 0x6D2B79F5; var r = Math.imul(t ^ (t >>> 15), 1 | t); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
   function hash(s) { var h = 2166136261; s = String(s); for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -118,7 +118,7 @@ var Market = (function () {
       // bots move part of the way toward their best response to this round's prices
       bots.forEach(function (b) { x.bp[b] = r2(clamp(0.5 * x.bp[b] + 0.5 * bestResponse(d, x, pr, b) + (R() - 0.5) * 3, t.min, t.max)); });
     }
-    Object.keys(res).forEach(function (s) { x.sales[s] = r2((x.sales[s] || 0) + res[s].q); if (!isBot(s) && st.sc[s]) { st.sc[s].pr = r2(st.sc[s].pr + res[s].pr); } });
+    Object.keys(res).forEach(function (s) { x.sales[s] = r2((x.sales[s] || 0) + res[s].q); if (!isBot(s) && st.sc[s]) { st.sc[s].pr = r2(st.sc[s].pr + res[s].pr * (res[s].pr > 0 && st.sc[s].bu >= st.round ? 1 + TEAM_BOOST : 1)); } });   // 4.2: a team bonus adds 15% to positive profit
     x.last = res;
     return ps;
   }
@@ -180,10 +180,64 @@ var Market = (function () {
     return out;
   }
 
+  // ---- Version 4.1: Đấu trí (live 1-v-1 case challenges between classmates) ----
+  // chals[pid] (written by each student, read by everyone): {eid, res:[{id, opp, pct, ms}], fft:[{id, to}]}.
+  // A challenge is applied once, when both players reported (higher % wins, then the faster one) or on a forfeit.
+  // Effect: in a district both run → brand +1 / −1 (or the licence changes hands); otherwise the winner takes 10% of the loser's average round profit.
+  function applyChals(st, cfg, moves, chals, now) {
+    if (!chals) return 0;
+    st.cseen = st.cseen || {}; var byId = {}, n = 0;
+    Object.keys(chals).forEach(function (pid) {
+      var c = chals[pid]; if (!c || c.eid !== st.eid) return;
+      (c.res || []).forEach(function (r) { if (r && r.id) (byId[r.id] = byId[r.id] || { r: {} }).r[pid] = r; });
+      (c.fft || []).forEach(function (f) { if (f && f.id) (byId[f.id] = byId[f.id] || { r: {} }).fft = { l: pid, w: String(f.to) }; });
+    });
+    Object.keys(byId).forEach(function (id) {
+      if (st.cseen[id]) return;
+      var g = byId[id], w = null, l = null, ps = Object.keys(g.r);
+      if (g.fft) { w = g.fft.w; l = g.fft.l; }
+      else {
+        if (ps.length < 2) return;
+        var a = g.r[ps[0]], b = g.r[ps[1]]; if (a.opp !== ps[1] || b.opp !== ps[0]) return;
+        var pa = clamp(+a.pct || 0, 0, 100), pb = clamp(+b.pct || 0, 0, 100);
+        if (pa !== pb) w = pa > pb ? ps[0] : ps[1]; else if ((+a.ms || 0) !== (+b.ms || 0)) w = (+a.ms || 0) < (+b.ms || 0) ? ps[0] : ps[1];
+        l = w ? (w === ps[0] ? ps[1] : ps[0]) : null;
+      }
+      st.cseen[id] = 1; n++;
+      if (!w) { st.log.unshift({ k: 'chal', r: st.round, a: ps[0], b: ps[1], draw: true, t: now }); if (st.log.length > LOGN) st.log.length = LOGN; return; }
+      var mw = moves[w] || { ch: 1 }, ml = moves[l] || { ch: 1 }, W = register(st, cfg, w, mw), Lo = register(st, cfg, l, ml);
+      var shared = activeOf(mw, cfg).filter(function (d) { return activeOf(ml, cfg).indexOf(d) >= 0 && st.d[d]; })[0] || null, amt = 0;
+      if (shared) {
+        var x = st.d[shared];
+        if (BY[shared].type === 'mono') { if (x.holder === l) x.holder = w; }
+        else { x.lvl[w] = Math.min(MAXLVL, (x.lvl[w] === undefined ? startLvl(mw) : x.lvl[w]) + 1); x.lvl[l] = Math.max(0, (x.lvl[l] === undefined ? 1 : x.lvl[l]) - 1); }
+      } else { amt = r2(0.1 * Math.max(0, Lo.pr) / Math.max(1, Lo.rd)); Lo.pr = r2(Lo.pr - amt); W.pr = r2(W.pr + amt); }
+      W.w++; Lo.l++; W.cw = (W.cw || 0) + 1;
+      st.log.unshift({ k: 'chal', r: st.round, a: w, b: l, d: shared, amt: amt, fft: !!g.fft, t: now }); if (st.log.length > LOGN) st.log.length = LOGN;
+    });
+    return n;
+  }
+  // ---- Version 4.2: Hợp tác (team cases). The team leader's chal doc carries team = {id, members, done:{pct}}.
+  // A team that scores ≥ 60% gets +15% on every member's positive profit for the next 2 market rounds.
+  function applyTeams(st, cfg, moves, chals, now) {
+    if (!chals) return 0;
+    st.tseen = st.tseen || {}; var n = 0;
+    Object.keys(chals).forEach(function (pid) {
+      var c = chals[pid], t = c && c.team; if (!c || c.eid !== st.eid || !t || !t.id || !t.done || st.tseen[t.id]) return;
+      st.tseen[t.id] = 1; n++;
+      var pct = clamp(+t.done.pct || 0, 0, 100), ms = (t.members || []).filter(function (m, i, a) { return typeof m === 'string' && a.indexOf(m) === i; }).slice(0, 3), ok = pct >= TEAM_PASS;
+      if (ok) ms.forEach(function (m) { var sc = register(st, cfg, m, moves[m] || { ch: 1 }); sc.bu = st.round + TEAM_ROUNDS; sc.tw = (sc.tw || 0) + 1; });
+      st.log.unshift({ k: 'team', r: st.round, a: pid, m: ms, pct: pct, ok: ok, t: now }); if (st.log.length > LOGN) st.log.length = LOGN;
+    });
+    return n;
+  }
+
   // ---- the clock: duels at once, a market round every roundSec, the end at cfg.end ----
-  function tick(st, cfg, moves, now) {
+  function tick(st, cfg, moves, now, chals) {
     if (st.status !== 'live') return { changed: false, ended: st.status === 'ended' };
     var changed = applyDuels(st, cfg, moves, now).length > 0;
+    if (applyChals(st, cfg, moves, chals, now)) changed = true;
+    if (applyTeams(st, cfg, moves, chals, now)) changed = true;
     if (now >= st.nextAt) { clear(st, cfg, moves); st.nextAt = Math.max(st.nextAt + cfg.roundSec * 1000, now + 1000); changed = true; }
     if (now >= cfg.end) { st.status = 'ended'; return { changed: true, ended: true }; }
     return { changed: changed, ended: false };
@@ -246,6 +300,6 @@ var Market = (function () {
   return { TYPES: T, NEED: NEED, DISTRICTS: D, BY: BY, TEAMS: TEAMS, XP: XP, MAXACT: MAXACT, MAXLVL: MAXLVL,
     newEvent: newEvent, clear: clear, tick: tick, applyDuels: applyDuels, finish: finish, register: register,
     allowed: allowed, activeOf: activeOf, playersIn: playersIn, botIds: botIds, botName: botName, botDef: botDef, isBot: isBot,
-    defenceOf: defenceOf, canDuel: canDuel, leader: leader, cityShare: cityShare, preview: preview, bestResponse: bestResponse, decision: decision };
+    defenceOf: defenceOf, canDuel: canDuel, applyChals: applyChals, applyTeams: applyTeams, TEAM_PASS: TEAM_PASS, leader: leader, cityShare: cityShare, preview: preview, bestResponse: bestResponse, decision: decision };
 })();
 if (typeof module !== 'undefined') module.exports = Market;
