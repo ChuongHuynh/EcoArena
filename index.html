@@ -402,7 +402,7 @@ var NPC={
 };
 var SHOP=[
  {id:'hint',kind:'use',face:'💡',price:100,rank:-1,name:V('Thẻ gợi ý','Hint card'),d:V('Loại một đáp án sai khi trả lời NPC.','Removes one wrong answer in an NPC challenge.')},
- {id:'again',kind:'use',face:'🔄',price:150,rank:-1,name:V('Thẻ làm lại','Second-chance card'),d:V('Mỗi câu chỉ được trả lời một lần. Có thẻ này, trả lời sai ở chặng học hoặc với NPC được làm lại một lần (dùng hết thẻ).','Each question allows one answer. With this card, a wrong answer in a stage or to an NPC gets one more try (the card is used up).')},
+ {id:'again',kind:'use',face:'🔄',price:150,rank:-1,name:V('Thẻ làm lại','Second-chance card'),d:V('Câu hỏi của NPC chỉ được trả lời một lần. Có thẻ này, trả lời sai với NPC được làm lại một lần (dùng hết thẻ).','An NPC question allows one answer. With this card, a wrong answer to an NPC gets one more try (the card is used up).')},
  {id:'retry',kind:'use',face:'❤️',price:500,rank:-1,name:V('Vé đấu lại trùm','Boss retry ticket'),d:V('Thêm một mạng khi đánh trùm (2 → 3 mạng).','One extra life against a boss (2 → 3 lives).')},
  {id:'sign',kind:'up',face:'🪧',price:300,rank:-1,name:V('Biển hiệu mới','New shop sign'),d:V('Thêm khách: thêm 1 NPC trên đường và NPC xuất hiện thường hơn. Bản đồ thi đấu: thương hiệu khởi điểm ★2.','More customers: one more NPC on the road, and NPCs appear more often. Battle map: your brand starts at ★2.')},
  {id:'espresso',kind:'up',face:'☕',price:800,rank:0,name:V('Máy pha espresso','Espresso machine'),d:V('+10% XP ở mọi chặng và nhiệm vụ. Cần qua trùm Chương 1.','+10% XP on every stage and mission. Needs the Chapter 1 boss beaten.')},
@@ -658,28 +658,31 @@ function fastCall(action,data,again){
 }
 var Bank=(function(){
   if(window.ARENA_BANK&&window.BankCore&&!SHEETS){
-    var keys={},seq=0,items=window.ARENA_BANK.items,vocab=window.ARENA_BANK.vocab;
+    var keys={},seq=0,items=window.ARENA_BANK.items;
     var put=function(k){var id='p'+(++seq);keys[id]=k;return id;};
     var done=function(x){return Promise.resolve(x.error?{ok:false,error:x.error}:Object.assign({ok:true},x));};
     var byId={};items.forEach(function(q){byId[q.id]=q;});
     if(window.__ARENA_TEST)window.__ARENA_TEST.caseKey=function(play){return keys[play];};   // tests answer cases from the local key
     return {local:true,
-      stage:function(node){var s=BankCore.stage(items,vocab,node);return done({play:put(s.key),tasks:s.pub});},
-      check:function(play,i,ans,ex){return done(keys[play]&&keys[play][i]?BankCore.check(keys[play][i],ans,ex):{error:'expired'});},
+      stage:function(node){var s=BankCore.stage(items,[],node);return done({play:put(s.key),tasks:s.pub});},
+      submit:function(play,ans,mode){return done(keys[play]?BankCore.submit(keys[play],ans,mode):{error:'expired'});},
       hint:function(play,i){return done(keys[play]&&keys[play][i]?BankCore.hint(keys[play][i],2):{error:'expired'});},
       boss:function(node){var s=BankCore.boss(items,node);return done({play:put(s.key),qs:s.pub});},
-      bossCheck:function(play,i,ans){return done(keys[play]&&keys[play][i]?BankCore.single(keys[play][i],ans):{error:'expired'});},
       npc:function(o){var s=BankCore.npc(items,o);return done({play:put(s.key),q:s.pub});},
       duel:function(maxCh){var s=BankCore.duel(items,{maxCh:maxCh,n:5});return done({play:put(s.key),qs:s.pub});},
       case:function(cid,team){if(!window.CaseCore)return done({error:'no_cases'});var seed='L'+Math.random(),s=CaseCore.make(cid,seed);s.key.used=[];if(team)s.key.team={lead:cloud.uid,roles:team.roles};return done({play:put(s.key),pub:s.pub,share:seed});},
       caseJoin:function(share,cid,team){if(!window.CaseCore)return done({error:'no_cases'});var s=CaseCore.make(cid,share);s.key.used=[];s.key.team=team;return done({play:put(s.key),pub:s.pub});},
-      caseCheck:function(play,i,ans){var k=keys[play];if(!k||!k.parts)return done({error:'expired'});if(k.used.indexOf(i)>=0)return done({error:'done'});
-        if(k.team){var ro=k.parts[i].role;if(ro==='team'?k.team.lead!==cloud.uid:(k.team.roles[ro]||[]).indexOf(cloud.uid)<0)return done({error:'not_yours'});}
-        k.used.push(i);var rt=!!CaseCore.grade(k,i,ans).right;return done({right:rt,t:CaseCore.tally?CaseCore.tally(k,i,rt):null});},
+      caseSubmit:function(play,ans){var k=keys[play];if(!k||!k.parts)return done({error:'expired'});var own={r:0,n:0},team={r:0,n:0},pr={},t=[];
+        Object.keys(ans||{}).forEach(function(x){var i=+x;if(!(i>=0&&i<k.parts.length)||k.used.indexOf(i)>=0)return;
+          if(k.team){var ro=k.parts[i].role;if(ro==='team'?k.team.lead!==cloud.uid:(k.team.roles[ro]||[]).indexOf(cloud.uid)<0)return;}
+          k.used.push(i);var rt=!!CaseCore.grade(k,i,ans[x]).right,b=k.parts[i].role==='team'?team:own;b.n++;if(rt)b.r++;pr[i]=rt?1:0;if(CaseCore.tally)t=t.concat(CaseCore.tally(k,i,rt)||[]);});
+        if(!Object.keys(pr).length)return done({error:'done'});
+        return done({right:own.r+team.r,n:own.n+team.n,own:own,team:team,pr:pr,t:t.reduce(function(m,x){var o=m.filter(function(y){return y[0]===x[0];})[0];if(o){o[1]+=x[1];o[2]+=x[2];}else m.push(x.slice());return m;},[])});},
+
       caseSol:function(share,cid){if(!window.CaseCore)return done({error:'no_cases'});var s=CaseCore.make(cid,share);return done({cid:cid,title:s.pub.title,story:s.pub.story,parts:s.pub.parts.map(function(q){return q.q;}),sol:CaseCore.solution(cid,share)});},
       npcHint:function(play){return done(keys[play]?BankCore.hint(keys[play],1):{error:'expired'});},
       npcCheck:function(play,ans,ex){return done(keys[play]?BankCore.single(keys[play],ans,ex):{error:'expired'});},
-      info:function(){return {n:items.length,news:items.filter(function(q){return q.src==='v1_new';}).length,vocab:vocab.length};},
+      info:function(){return {n:items.length,news:items.filter(function(q){return q.src==='v1_new';}).length};},
       text:function(id){return byId[id]||null;}};
   }
   if(FAST){
@@ -689,17 +692,17 @@ var Bank=(function(){
       return fastCall(action,Object.assign({key:ks[i]},data)).then(function(res){if(res.key){ks[i]=res.key;delete res.key;}return res;});};
     return {local:false,fast:true,
       stage:function(node){return start('stage',{node:node});},
-      check:function(play,i,ans,ex){return use(play,i,'check',{answer:ans,extra:!!ex});},
+      submit:function(play,ans,mode){return fk[play]?fastCall('submit',{keys:fk[play],answers:ans,mode:mode}):api('submit',{play:play,answers:ans,mode:mode});},   // not ours = a duel the Sheet dealt
       hint:function(play,i){return use(play,i,'hint',{});},
       boss:function(node){return start('boss',{node:node});},
-      bossCheck:function(play,i,ans){return fk[play]?use(play,i,'bossCheck',{answer:ans}):api('bossCheck',{play:play,i:i,answer:ans});},   // not ours = a duel the Sheet dealt
       npc:function(o){return start('npc',o,true);},
       // a Worker still on Release 2 has no duel → ask the Sheet instead
       duel:function(maxCh){return start('duel',{maxCh:maxCh}).then(function(res){return res.error==='bad_request'?api('duel',{maxCh:maxCh}):res;});},
       case:function(cid,team){return start('case',{cid:cid,team:team||null},true).then(function(res){if(res.error==='bad_request'&&!team)res.error='no_cases';if(res.ok)res.share=fk[res.play][0];return res;});},   // a Worker before 4.1 has no cases
       caseJoin:function(share){return Promise.resolve({ok:true,play:fput([share])});},
       caseSol:function(share){return fastCall('caseSol',{key:share});},
-      caseCheck:function(play,i,ans){return use(play,0,'caseCheck',{i:i,answer:ans});},
+      caseSubmit:function(play,ans){return use(play,0,'caseSubmit',{answers:ans});},
+      caseDebrief:function(since){return fastCall('caseDebrief',{since:since});},
       npcHint:function(play){return use(play,0,'npcHint',{});},
       npcCheck:function(play,ans,ex){return use(play,0,'npcCheck',{answer:ans,extra:!!ex});},
       info:function(){return cloud.bankInfo||null;},
@@ -707,13 +710,12 @@ var Bank=(function(){
   }
   if(SHEETS)return {local:false,
     stage:function(node){return api('stage',{node:node});},
-    check:function(play,i,ans,ex){return api('check',{play:play,task:i,answer:ans,extra:!!ex});},
+    submit:function(play,ans,mode){return api('submit',{play:play,answers:ans,mode:mode});},
     hint:function(play,i){return api('hint',{play:play,task:i});},
     boss:function(node){return api('boss',{node:node});},
-    bossCheck:function(play,i,ans){return api('bossCheck',{play:play,i:i,answer:ans});},
     npc:function(o){return api('npc',o);},
     duel:function(maxCh){return api('duel',{maxCh:maxCh});},
-    case:function(){return Promise.resolve({ok:false,error:'no_cases'});},caseCheck:function(){return Promise.resolve({ok:false,error:'no_cases'});},caseJoin:function(){return Promise.resolve({ok:false,error:'no_cases'});},caseSol:function(){return Promise.resolve({ok:false,error:'no_cases'});},
+    case:function(){return Promise.resolve({ok:false,error:'no_cases'});},caseSubmit:function(){return Promise.resolve({ok:false,error:'no_cases'});},caseDebrief:function(){return Promise.resolve({ok:false,error:'no_cases'});},caseJoin:function(){return Promise.resolve({ok:false,error:'no_cases'});},caseSol:function(){return Promise.resolve({ok:false,error:'no_cases'});},
     npcHint:function(play){return api('npcHint',{play:play});},
     npcCheck:function(play,ans,ex){return api('npcCheck',{play:play,answer:ans,extra:!!ex});},
     info:function(){return cloud.bankInfo||null;},
@@ -998,7 +1000,7 @@ function hud(){
   document.documentElement.lang=lang;
   document.querySelectorAll('[data-lang]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});
   var w=WORLDS[worldNow()],r=rankIndex();
-  el('crumb').textContent=L('Vi mô · Phiên bản 4.3','Micro · Version 4.3')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
+  el('crumb').textContent=L('Vi mô · Phiên bản 4.5','Micro · Version 4.5')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
   el('rank').textContent=(r<0?L('Khởi nghiệp','Starting out'):tx(WORLDS[r].rank))+(topTitle()?' · ⚡'+titleName(topTitle()):'');
   document.body.classList.toggle('cursed',!!S.curse);achCheck();
   el('xp').textContent=S.xp+' XP';el('cap').textContent=L('Vốn ','Capital ')+fmt(S.cap)+'k';
@@ -1108,7 +1110,7 @@ function buy(id){var it=SHOP.filter(function(x){return x.id===id;})[0];if(!it||S
 function renderMenu(confirm){
   var bi=Bank&&Bank.info(),n=bi?bi.n:0,news=bi?bi.news:0;
   var h='<h3 class="q">'+L('Cài đặt','Settings')+'</h3>';
-  if(teacherAllowed()&&bi)h+='<p class="small">'+L('Ngân hàng: ','Bank: ')+'<b>'+n+'</b> '+L('câu: ',' questions: ')+(n-news)+' '+L('câu trắc nghiệm từ đề giữa kỳ, cuối kỳ và 3 bộ luyện tập của lớp, cộng ','multiple-choice questions from the class midterm, final and three practice sets, plus ')+news+L(' câu mới cho C4–C7 (bản nháp chờ thầy duyệt), ',' new draft questions for C4–C7 awaiting review, ')+bi.vocab+L(' thuật ngữ Việt–Anh.',' VI–EN terms.')+'</p>';
+  if(teacherAllowed()&&bi)h+='<p class="small">'+L('Ngân hàng: ','Bank: ')+'<b>'+n+'</b> '+L('câu: ',' questions: ')+(n-news)+' '+L('câu trắc nghiệm từ đề giữa kỳ, cuối kỳ và 3 bộ luyện tập của lớp, cộng ','multiple-choice questions from the class midterm, final and three practice sets, plus ')+news+L(' câu mới cho C4–C7 (bản nháp chờ thầy duyệt).',' new draft questions for C4–C7 awaiting review.')+'</p>';
   if(teacherAllowed())h+='<p class="small muted">'+L('Câu hỏi hiện chỉ có tiếng Việt; giao diện có cả hai thứ tiếng.','Questions are in Vietnamese for now; the interface is bilingual.')+'</p>';
   h+='<p class="small">'+cloudPill()+(cloud.last?' · '+ago(cloud.last):'')+'</p>';
   if(SHEETS&&sess)h+='<div class="rowline"><span>'+L('Đăng nhập: ','Signed in: ')+'<b>'+esc(sess.name)+'</b>'+(sess.role==='teacher'?' · '+L('giáo viên','teacher'):'')+'</span><button class="btn ghost" style="padding:4px 10px;font-size:13px" data-act="logout">'+L('Đăng xuất','Sign out')+'</button></div>';
@@ -1150,153 +1152,116 @@ function award(node,stars,cap,score){
   persist();return first&&stars>=1;
 }
 
+/* ---------- 4.5: a set is answered in full, then handed in once; only the number right is shown ---------- */
+function qsHas(a){return a!==null&&a!==undefined&&(!Array.isArray(a)||a.every(function(v){return v!==null&&v!==undefined;}));}
+function qsLeft(ans){return ans.filter(function(a){return !qsHas(a);}).length;}
+function qsDots(n,ans,i,act){var h='<div class="dots qsdots">';for(var k=0;k<n;k++)h+='<i role="button" tabindex="0" data-act="'+act+'" data-i="'+k+'" class="'+(k===i?'cur':qsHas(ans[k])?'done':'')+'" aria-label="'+L('Câu ','Question ')+(k+1)+'"></i>';return h+'</div>';}
+function qsNote(ans){var left=qsLeft(ans);return '<p class="small muted qsnote">'+(left?L('Còn <b>'+left+'</b> câu chưa chọn. ','<b>'+left+'</b> still unanswered. '):L('Đã chọn hết. ','All answered. '))+L('Sửa thoải mái trước khi nộp. Kết quả chỉ báo tổng số câu đúng.','Change anything before you submit. The result shows only the total right.')+'</p>';}
+function qsBar(o){var left=qsLeft(o.ans),h=o.quit||'';   // o: {i, n, ans, pre, busy, confirm, quit}
+  h+='<button class="btn ghost" data-act="'+o.pre+'prev" aria-label="'+L('Câu trước','Previous')+'"'+(o.i?'':' disabled')+'>←</button>';
+  if(o.i<o.n-1)h+='<button class="btn ghost" data-act="'+o.pre+'next">'+L('Câu tiếp','Next')+' →</button>';
+  return h+'<button class="btn" data-act="'+o.pre+'sub"'+(o.busy?' disabled':'')+'>'+(o.busy?L('Đang chấm…','Marking…'):left&&o.confirm?L('Nộp dù còn '+left+' câu trống?','Submit with '+left+' blank?'):L('Nộp bài','Submit'))+'</button>';}
+function qsAns(ans){return ans.map(function(a){return Array.isArray(a)?a.slice():a===null||a===undefined?-1:a;});}
+
 /* ---------- stage ---------- */
 function startStage(node){
-  P={node:node,kind:'stage',tasks:null,i:0,xp:0,results:[],busy:false};openPlay();playLoading(node.id+' · '+tx(node.name));
-  var me=P;Bank.stage(node.id).then(function(res){if(P!==me)return;if(!res.ok){playFail(res);return;}P.play=res.play;P.tasks=res.tasks;startTask();renderStage();},function(){if(P===me)playFail(netFail());});
+  P={node:node,kind:'stage',tasks:null,i:0,xp:0,busy:false,ans:[],removed:[],hinted:[],confirm:false,err:''};openPlay();playLoading(node.id+' · '+tx(node.name));
+  var me=P;Bank.stage(node.id).then(function(res){if(P!==me)return;if(!res.ok){playFail(res);return;}P.play=res.play;P.tasks=res.tasks;
+    P.ans=P.tasks.map(function(t){return t.type==='tf'?t.items.map(function(){return null;}):null;});P.removed=P.tasks.map(function(){return [];});P.hinted=P.tasks.map(function(){return false;});renderStage();},function(){if(P===me)playFail(netFail());});
 }
-function startTask(){var t=P.tasks[P.i];P.t={attempt:1,phase:'answer',hinted:false,removed:[],sel:null,ans:t.items?t.items.map(function(){return null;}):null,link:{},pickL:null,tried:[],last:null,final:null,e:''};}
-function taskTag(t){return t.type==='mc'?L('Trắc nghiệm','Multiple choice'):t.type==='tf'?L('Đúng hay sai','True or false'):L('Ghép thuật ngữ Việt ↔ Anh','Term match VI ↔ EN');}
+function taskTag(t){return t.type==='tf'?L('Đúng hay sai','True or false'):L('Trắc nghiệm','Multiple choice');}
 function renderStage(){
-  var t=P.tasks[P.i],s=P.t,locked=s.phase==='done',h='';
+  var t=P.tasks[P.i],a=P.ans[P.i],rm=P.removed[P.i],h='';
   el('play-title').innerHTML=esc(P.node.id+' · '+tx(P.node.name));playHud();
-  h+='<div class="dots" aria-hidden="true">';P.tasks.forEach(function(_,i){h+='<i class="'+(i<P.i||(i===P.i&&locked)?'done':i===P.i?'cur':'')+'"></i>';});h+='</div>';
-  h+='<div class="card"><span class="tag">'+L('Nhiệm vụ ','Task ')+(P.i+1)+'/5 · '+taskTag(t)+'</span>'+(t.type!=='match'?viBadge():'');
+  h+=qsDots(P.tasks.length,P.ans,P.i,'stgo');
+  h+='<div class="card"><span class="tag">'+L('Nhiệm vụ ','Task ')+(P.i+1)+'/'+P.tasks.length+' · '+taskTag(t)+'</span>'+viBadge();
   if(t.type==='mc'){
     h+='<h3 class="q">'+esc(t.q)+'</h3>';
-    t.opts.forEach(function(o,i){var c='';
-      if(s.removed.indexOf(i)>=0)c=' gone';
-      else if(s.phase==='answer'){if(s.sel===i)c=' sel';else if(s.tried.indexOf(i)>=0)c=' no';}
-      else if(s.sel===i)c=s.final&&s.final.ok?' ok':' no';
-      else if(s.tried.indexOf(i)>=0)c=' no';
-      h+='<button class="opt'+c+'" data-act="mc" data-i="'+i+'"'+(s.phase!=='answer'||P.busy?' disabled':'')+'>'+esc(o)+'</button>';});
-  }else if(t.type==='tf'){
-    h+='<h3 class="q">'+L('Mỗi nhận định dưới đây đúng hay sai?','Is each statement true or false?')+'</h3>';
-    t.items.forEach(function(it,i){var a=s.ans[i];
-      h+='<div class="tfrow"><div>'+esc(it.stem.replace(/:\s*$/,''))+': <b>'+esc(it.opt)+'</b></div><div class="tfbtns">'+[true,false].map(function(v){
-        var c='';if(a===v)c=s.phase==='answer'?' sel':(s.final&&s.final.ok?' ok':' paired');
-        return '<button class="opt'+c+'" data-act="tf" data-i="'+i+'" data-v="'+v+'"'+(s.phase!=='answer'||P.busy?' disabled':'')+'>'+(v?L('Đúng','True'):L('Sai','False'))+'</button>';}).join('')+'</div></div>';});
+    t.opts.forEach(function(o,i){var gone=rm.indexOf(i)>=0;h+='<button class="opt'+(gone?' gone':a===i?' sel':'')+'" data-act="mc" data-i="'+i+'"'+(gone||P.busy?' disabled':'')+'>'+esc(o)+'</button>';});
+    if(P.hinted[P.i])h+='<div class="fb hint"><b>'+L('Gợi ý 50:50','50:50 hint')+'</b>'+L('Đã loại hai đáp án sai.','Two wrong answers removed.')+'</div>';
+    else h+='<button class="btn ghost mini" data-act="hint"'+(P.busy?' disabled':'')+'>'+L('50:50 (−5 XP)','50:50 (−5 XP)')+'</button>';
   }else{
-    h+='<h3 class="q">'+L('Chạm một thuật ngữ tiếng Việt, rồi chạm nghĩa tiếng Anh của nó.','Tap a Vietnamese term, then its English match.')+'</h3><div class="pairs"><div>';
-    t.vi.forEach(function(vi,i){var linked=s.link[i]!==undefined,c='';
-      if(s.phase==='answer'){if(s.pickL===i)c=' sel';else if(linked)c=' paired';}else c=s.final&&s.final.ok?' ok':' paired';
-      h+='<button class="opt'+c+'" style="margin-bottom:8px" data-act="ml" data-i="'+i+'"'+(s.phase!=='answer'||P.busy?' disabled':'')+'>'+esc(vi)+(linked?' ↔ '+(Object.keys(s.link).indexOf(String(i))+1):'')+'</button>';});
-    h+='</div><div>';
-    t.en.forEach(function(en,j){var by=null;Object.keys(s.link).forEach(function(k){if(s.link[k]===j)by=+k;});var c=by!==null?(s.phase==='answer'||!(s.final&&s.final.ok)?' paired':' ok'):'';
-      h+='<button class="opt'+c+'" style="margin-bottom:8px" data-act="mr" data-j="'+j+'"'+(s.phase!=='answer'||P.busy?' disabled':'')+'>'+esc(en)+(by!==null?' ↔ '+(Object.keys(s.link).indexOf(String(by))+1):'')+'</button>';});
-    h+='</div></div>';
+    h+='<h3 class="q">'+L('Mỗi nhận định dưới đây đúng hay sai?','Is each statement true or false?')+'</h3>';
+    t.items.forEach(function(it,i){
+      h+='<div class="tfrow"><div>'+esc(it.stem.replace(/:\s*$/,''))+': <b>'+esc(it.opt)+'</b></div><div class="tfbtns">'+[true,false].map(function(v){
+        return '<button class="opt'+(a[i]===v?' sel':'')+'" data-act="tf" data-i="'+i+'" data-v="'+v+'"'+(P.busy?' disabled':'')+'>'+(v?L('Đúng','True'):L('Sai','False'))+'</button>';}).join('')+'</div></div>';});
   }
-  if(s.hinted&&t.type==='mc')h+='<div class="fb hint"><b>'+L('Gợi ý 50:50','50:50 hint')+'</b>'+L('Đã loại hai đáp án sai.','Two wrong answers removed.')+'</div>';
-  if(s.phase==='wrong')h+='<div class="fb bad">'+(t.type==='mc'?L('Chưa đúng.','Not quite.'):L('Chưa đúng hết: đúng ','Not all right: ')+s.last.right+'/'+s.last.n+L('.',' correct.'))+' '+L('Dùng 🔄 thẻ làm lại để trả lời thêm một lần, hoặc bỏ qua câu này.','Use a 🔄 second-chance card for one more try, or skip this question.')+'</div>';
-  if(s.err)h+='<div class="fb bad">'+s.err+'</div>';
-  if(locked){var f=s.final,e=t.type==='mc'&&s.e?'<br>'+L('Giải thích: ','Why: ')+esc(s.e):'';
-    h+='<div class="fb '+(f.ok?'good':'bad')+'"><b>'+(f.ok?(f.attempt===1?L('Chính xác!','Correct!'):L('Đúng rồi, ở lần thử thứ hai.','Right, on your second try.')):(t.type==='mc'?L('Chưa đúng.','Not quite.'):L('Chưa đúng hết: đúng ','Not all right: ')+f.right+'/'+f.n+L('.',' correct.'))+' '+L('Câu này sẽ quay lại để ôn tập.','This one comes back for review.'))+'</b> +'+f.xp+' XP'+e+'</div>';}
-  if(locked)h+=reactHtml(s.react,s.final.ok);
-  h+='</div>';
-  el('play-body').innerHTML=h;
-  var a='<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button>';
-  if(s.phase==='answer')a+=(t.type==='mc'?'<button class="btn ghost" data-act="hint"'+(s.hinted||P.busy?' disabled':'')+'>'+L('50:50 (−5 XP)','50:50 (−5 XP)')+'</button>':'')+'<button class="btn" data-act="check"'+(ready()&&!P.busy?'':' disabled')+'>'+(P.busy?L('Đang kiểm tra…','Checking…'):L('Kiểm tra','Check'))+'</button>';
-  else if(s.phase==='wrong')a+='<button class="btn ghost" data-act="skipq">'+L('Bỏ qua','Skip')+'</button><button class="btn" data-act="retry"'+(S.inv.again>0?'':' disabled')+'>🔄 '+L('Làm lại','Try again')+' ('+S.inv.again+')</button>';
-  else a+='<button class="btn" data-act="next">'+(P.i===4?L('Xem kết quả','See results'):L('Tiếp tục','Next'))+'</button>';
-  el('play-bar').innerHTML=a;
+  if(P.err)h+='<div class="fb bad">'+P.err+'</div>';
+  el('play-body').innerHTML=h+'</div>'+qsNote(P.ans);
+  el('play-bar').innerHTML=qsBar({i:P.i,n:P.tasks.length,ans:P.ans,pre:'st',busy:P.busy,confirm:P.confirm,quit:'<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button>'});
 }
-function ready(){var t=P.tasks[P.i],s=P.t;
-  if(t.type==='mc')return s.sel!==null;if(t.type==='tf')return s.ans.every(function(v){return v!==null;});
-  return Object.keys(s.link).length===t.vi.length;}
-function answerOf(){var t=P.tasks[P.i],s=P.t;
-  if(t.type==='mc')return s.sel;if(t.type==='tf')return s.ans.slice();
-  return t.vi.map(function(_,i){return s.link[i]===undefined?-1:s.link[i];});}
-function check(){
-  if(P.busy)return;var s=P.t,hc=s.hinted?5:0,me=P;P.busy=true;s.err='';renderStage();
-  var t=P.tasks[P.i],extra=s.attempt===1&&S.inv.again>0;     // holding a 🔄 card asks the checker for one more try
-  if(t.type==='mc')s.tried.push(s.sel);
-  Bank.check(P.play,P.i,answerOf(),extra).then(function(res){
-    if(P!==me)return;P.busy=false;
-    if(!res.ok){s.err=bankError(res);if(t.type==='mc')s.tried.pop();renderStage();return;}
-    var ok=res.right===res.n;s.last=res;s.e=ok?res.e||'':'';
-    if(ok||res.final||!extra||s.attempt>1)taskFinal(ok,res);   // one try unless a card is held (an older server may still offer two)
-    else{s.phase='wrong';renderStage();}
-  },function(){if(P!==me)return;P.busy=false;s.err=bankError(netFail());renderStage();});
-}
-function taskFinal(ok,res){var s=P.t,hc=s.hinted?5:0;
-  s.final=ok?{ok:true,attempt:res.attempt,right:res.right,n:res.n,score:res.attempt===1?100:60,xp:Math.max(0,res.right*(res.attempt===1?15:10)-hc)}
-            :{ok:false,attempt:res.attempt,right:res.right,n:res.n,score:Math.round(40*res.right/res.n),xp:Math.max(0,res.right*5-hc)};
-  s.react=reactFor(P.node.id,ok);finishTask();}
-function finishTask(){var s=P.t,t=P.tasks[P.i];s.phase='done';P.xp+=s.final.xp;P.results[P.i]=s.final;
-  if(t.type==='mc'&&!s.final.ok&&S.review.indexOf(t.qid)<0)S.review.push(t.qid);
-  renderStage();}
-function retry(){var t=P.tasks[P.i],s=P.t;if(s.phase!=='wrong'||S.inv.again<=0)return;
-  S.inv.again--;persist();s.attempt=2;s.phase='answer';      // the answers stay; the player changes what they think is wrong
-  if(t.type==='mc')s.sel=null;else s.pickL=null;
-  renderStage();}
-function skipQ(){var s=P.t;if(s.phase==='wrong')taskFinal(false,s.last);}
+function stageGo(i){if(!P||P.kind!=='stage'||P.busy||P.res||i<0||i>=P.tasks.length)return;P.i=i;P.confirm=false;renderStage();el('play').scrollTop=0;}
 function useHint(){
-  var s=P.t,me=P;if(s.hinted||P.busy)return;P.busy=true;renderStage();
-  Bank.hint(P.play,P.i).then(function(res){if(P!==me)return;P.busy=false;if(res.ok){s.removed=res.remove;s.hinted=true;if(s.sel!==null&&s.removed.indexOf(s.sel)>=0)s.sel=null;}renderStage();},function(){if(P===me){P.busy=false;renderStage();}});
+  var i=P.i,me=P;if(P.hinted[i]||P.busy)return;P.busy=true;renderStage();
+  Bank.hint(P.play,i).then(function(res){if(P!==me)return;P.busy=false;if(res.ok){P.removed[i]=res.remove;P.hinted[i]=true;if(P.ans[i]!==null&&res.remove.indexOf(P.ans[i])>=0)P.ans[i]=null;}renderStage();},function(){if(P===me){P.busy=false;renderStage();}});
 }
-function nextTask(){if(P.i<4){P.i++;startTask();renderStage();el('play').scrollTop=0;}else stageResult();}
-function stageResult(){
-  var avg=Math.round(P.results.reduce(function(a,r){return a+r.score;},0)/5),st=starsPct(avg),bonus=st>=1?20:0;
-  P.xp+=bonus;var raw=P.xp;P.xp=xpBoost(P.xp);P.boost=P.xp-raw;S.xp+=P.xp;P.res={avg:avg,st:st,first:award(P.node,st,50,avg)};renderStageResult();
+function stageSubmit(){
+  if(!P||P.kind!=='stage'||P.busy||P.res)return;if(qsLeft(P.ans)&&!P.confirm){P.confirm=true;renderStage();return;}
+  P.busy=true;P.err='';renderStage();var me=P;
+  Bank.submit(P.play,qsAns(P.ans),'check').then(function(res){if(P!==me)return;P.busy=false;
+    if(!res.ok){P.err=bankError(res);P.confirm=false;renderStage();return;}
+    stageResult(res);},function(){if(P!==me)return;P.busy=false;P.confirm=false;P.err=bankError(netFail());renderStage();});
+}
+function stageResult(res){
+  var hc=5*P.hinted.filter(Boolean).length,avg=Math.round(100*res.right/Math.max(1,res.n)),st=starsPct(avg),bonus=st>=1?20:0;
+  P.xp=Math.max(0,res.right*15-hc)+bonus;var raw=P.xp;P.xp=xpBoost(P.xp);P.boost=P.xp-raw;S.xp+=P.xp;
+  P.res={avg:avg,st:st,right:res.right,n:res.n,hc:hc,bonus:bonus,react:reactFor(P.node.id,st>=1),first:award(P.node,st,50,avg)};renderStageResult();
 }
 function renderStageResult(){
-  var avg=P.res.avg,st=P.res.st,first=P.res.first;
+  var r=P.res,avg=r.avg,st=r.st,first=r.first;
   var h='<div class="card center"><div class="eyebrow">'+esc(P.node.id+' · '+tx(P.node.name))+'</div><h1>'+(st?L('Qua chặng!','Stage cleared!'):L('Chưa qua chặng','Not cleared yet'))+'</h1>'+starRow(st)+
     (st?'':'<p class="muted">'+L('Cần ít nhất 60%. Chơi lại để có bộ câu hỏi mới.','You need at least 60%. Replay for a fresh set of questions.')+'</p>')+
-    '<div class="kpis"><div class="kpi"><span>'+L('Điểm','Score')+'</span><b>'+avg+'%</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(first?'+'+(has('solar')?63:50)+'k':'—')+'</b></div></div><div class="rows">';
-  P.results.forEach(function(r,i){h+='<div class="rowline"><span>'+(i+1)+' · '+taskTag(P.tasks[i])+'</span><b>'+r.score+'% · +'+r.xp+' XP</b></div>';});
+    '<div class="kpis"><div class="kpi"><span>'+L('Đúng','Correct')+'</span><b>'+r.right+'/'+r.n+'</b></div><div class="kpi"><span>'+L('Điểm','Score')+'</span><b>'+avg+'%</b></div><div class="kpi"><span>XP</span><b>'+P.xp+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(first?'+'+(has('solar')?63:50)+'k':'—')+'</b></div></div><div class="rows">';
+  h+='<div class="rowline"><span>'+L('Câu đúng × 15 XP','Right answers × 15 XP')+'</span><b>+'+r.right*15+' XP</b></div>';
+  if(r.hc)h+='<div class="rowline"><span>'+L('Gợi ý 50:50','50:50 hints')+'</span><b>−'+r.hc+' XP</b></div>';
+  if(r.bonus)h+='<div class="rowline"><span>'+L('Thưởng qua chặng','Stage bonus')+'</span><b>+'+r.bonus+' XP</b></div>';
   if(P.boost)h+='<div class="rowline"><span>☕ '+L('Máy pha espresso','Espresso machine')+' +10%</span><b>+'+P.boost+' XP</b></div>';
-  el('play-body').innerHTML=h+'</div></div>';playHud();
+  el('play-body').innerHTML=h+'</div>'+reactHtml(r.react,st>=1)+'</div>';playHud();
   el('play-bar').innerHTML='<button class="btn ghost" data-act="replay">'+L('Chơi lại','Replay')+'</button><button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>';
 }
 
-/* ---------- boss ---------- */
+/* ---------- boss: every question answered, then handed in once; wrong answers ≥ lives = the deal falls through ---------- */
 var timerH=null;
 function stopTimer(){if(timerH){clearInterval(timerH);timerH=null;}}
 function startBoss(node,useTicket){
-  var lives=2;if(useTicket&&S.inv.retry>0){S.inv.retry--;lives=3;persist();}   // v3.1: the boss gives 2 lives (ticket: 3)
-  P={node:node,kind:'boss',qs:null,i:0,lives:lives,right:0,xp:0,pick:null,left:45,busy:false};
+  var lives=2;if(useTicket&&S.inv.retry>0){S.inv.retry--;lives=3;persist();}   // v3.1: the boss gives 2 lives (ticket: 3); 4.3: a life = one wrong answer allowed − 1
+  P={node:node,kind:'boss',qs:null,i:0,lives:lives,right:0,xp:0,ans:[],busy:false,confirm:false,err:''};
   openPlay();playLoading(node.id+' · '+tx(node.name));
-  var me=P;Bank.boss(node.id).then(function(res){if(P!==me)return;if(!res.ok){playFail(res);return;}P.play=res.play;P.qs=res.qs;bossQ();},function(){if(P===me)playFail(netFail());});
+  var me=P;Bank.boss(node.id).then(function(res){if(P!==me)return;if(!res.ok){playFail(res);return;}P.play=res.play;P.qs=res.qs;P.ans=P.qs.map(function(){return null;});
+    P.total=bossSec()*P.qs.length;P.left=P.total;stopTimer();
+    timerH=setInterval(function(){if(!P||P.kind!=='boss'||P.res){stopTimer();return;}P.left--;var bar=el('tbar'),c=el('tclock');if(bar)bar.style.width=Math.max(0,P.left/P.total*100)+'%';if(c)c.textContent=mmss(P.left*1000);
+      if(P.left<=0&&!P.busy){stopTimer();bossSubmit(true);}},1000);renderBoss();},function(){if(P===me)playFail(netFail());});
 }
-function bossQ(){P.pick=null;P.done=false;P.ok=false;P.tried=[];P.e='';P.fx='idle';P.dx=0;P.left=bossSec();stopTimer();
-  timerH=setInterval(function(){P.left--;var bar=el('tbar');if(bar)bar.style.width=Math.max(0,P.left/bossSec()*100)+'%';if(P.left<=0&&!P.busy&&!P.done){stopTimer();bossAnswer(-1);}},1000);renderBoss();}
 function renderBoss(){
-  var q=P.qs[P.i],done=P.done,h='';
-  el('play-title').innerHTML=esc(P.node.id+' · '+tx(P.node.name));playHud('<span class="pill lives">'+'❤'.repeat(Math.max(0,P.lives))+'</span>');
-  h+='<div class="bossbar">'+bossFig(P.fx)+'<div class="bmeta"><b>'+L('Trùm Chương ','Chapter boss ')+(P.node.w+1)+'</b>'+L('Đúng +'+BAL.bossRight+' XP · Sai −'+BAL.bossWrong+' XP','Right +'+BAL.bossRight+' XP · Wrong −'+BAL.bossWrong+' XP')+' · '+L('XP trận: ','Fight XP: ')+sxp(P.xp)+'</div>'+(P.dx?'<span class="xpf '+(P.dx>0?'up':'down')+'">'+(P.dx>0?'+':'−')+Math.abs(P.dx)+' XP</span>':'')+'</div>';
-  h+='<div class="dots" aria-hidden="true">';P.qs.forEach(function(_,i){h+='<i class="'+(i<P.i||(i===P.i&&done)?'done':i===P.i?'cur':'')+'"></i>';});h+='</div>';
-  h+='<div class="timer" aria-hidden="true"><i id="tbar" style="width:'+(P.left/bossSec()*100)+'%"></i></div>';
+  var q=P.qs[P.i],h='';
+  el('play-title').innerHTML=esc(P.node.id+' · '+tx(P.node.name));playHud('<span class="pill lives">'+'❤'.repeat(Math.max(0,P.lives))+'</span><span class="pill">⏱ <b id="tclock">'+mmss(P.left*1000)+'</b></span>');
+  h+='<div class="bossbar">'+bossFig('idle')+'<div class="bmeta"><b>'+L('Trùm Chương ','Chapter boss ')+(P.node.w+1)+'</b>'+L('Đúng +'+BAL.bossRight+' XP · Sai −'+BAL.bossWrong+' XP · '+P.lives+' mạng: sai từ '+P.lives+' câu là thua','Right +'+BAL.bossRight+' XP · Wrong −'+BAL.bossWrong+' XP · '+P.lives+' lives: '+P.lives+' wrong answers lose')+'</div></div>';
+  h+=qsDots(P.qs.length,P.ans,P.i,'bsgo');
+  h+='<div class="timer" aria-hidden="true"><i id="tbar" style="width:'+(P.left/P.total*100)+'%"></i></div>';
   h+='<div class="card"><span class="tag">'+L('Câu ','Question ')+(P.i+1)+'/'+P.qs.length+' · '+L('Chương ','Chapter ')+q.ch+'</span>'+viBadge()+'<h3 class="q">'+esc(q.q)+'</h3>';
-  q.opts.forEach(function(o,i){var c='',no=P.tried.indexOf(i)>=0;if(done&&P.ok&&i===P.pick)c=' ok';else if(no)c=' no';else if(P.pick===i)c=' sel';
-    h+='<button class="opt'+c+'" data-act="bossans" data-i="'+i+'"'+(done||P.busy||no?' disabled':'')+'>'+esc(o)+'</button>';});
-  if(done){var ok=P.ok;h+='<div class="fb '+(ok?'good':'bad')+'"><b>'+(ok?L('Chính xác! +'+BAL.bossRight+' XP','Correct! +'+BAL.bossRight+' XP'):P.pick===-1?L('Hết giờ! −1 mạng · −'+BAL.bossWrong+' XP','Time is up! −1 life · −'+BAL.bossWrong+' XP'):L('Lỗ! −1 mạng · −'+BAL.bossWrong+' XP','Loss! −1 life · −'+BAL.bossWrong+' XP'))+'</b>'+(P.e?esc(P.e):'')+'</div>';}
-  else if(P.err)h+='<div class="fb bad">'+P.err+'</div>';
-  h+='</div>';el('play-body').innerHTML=h;
-  el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Bỏ cuộc','Give up')+'</button>'+(done?'<button class="btn" data-act="bossnext">'+(P.lives<=0||P.i===P.qs.length-1?L('Xem kết quả','See results'):L('Câu tiếp','Next question'))+'</button>':(P.busy?'<button class="btn" disabled>'+L('Đang kiểm tra…','Checking…')+'</button>':''));
+  q.opts.forEach(function(o,i){h+='<button class="opt'+(P.ans[P.i]===i?' sel':'')+'" data-act="bossans" data-i="'+i+'"'+(P.busy?' disabled':'')+'>'+esc(o)+'</button>';});
+  if(P.err)h+='<div class="fb bad">'+P.err+'</div>';
+  el('play-body').innerHTML=h+'</div>'+qsNote(P.ans);
+  el('play-bar').innerHTML=qsBar({i:P.i,n:P.qs.length,ans:P.ans,pre:'bs',busy:P.busy,confirm:P.confirm,quit:'<button class="btn ghost" data-act="quit">'+L('Bỏ cuộc','Give up')+'</button>'});
 }
-function bossAnswer(i){
-  if(P.done||P.busy||P.tried.indexOf(i)>=0)return;P.pick=i;P.busy=true;P.err='';if(i<0)stopTimer();renderBoss();var me=P,q=P.qs[P.i];
-  Bank.bossCheck(P.play,P.i,i).then(function(res){
-    if(P!==me)return;P.busy=false;
-    if(!res.ok){P.err=bankError(res);P.pick=null;renderBoss();return;}
-    P.e=res.e||'';
-    if(res.right){stopTimer();P.done=true;P.ok=true;P.right++;P.xp+=BAL.bossRight;P.dx=BAL.bossRight;P.fx='hurt';}
-    else{stopTimer();P.done=true;if(i>=0&&P.tried.indexOf(i)<0)P.tried.push(i);P.lives--;P.xp-=BAL.bossWrong;P.dx=-BAL.bossWrong;P.fx='strike';if(S.review.indexOf(q.qid)<0)S.review.push(q.qid);}
-    showMeme(!!res.right);
-    renderBoss();
-  },function(){if(P!==me)return;P.busy=false;P.pick=null;P.err=bankError(netFail());renderBoss();});
+function bossGo(i){if(!P||P.kind!=='boss'||P.busy||P.res||!P.qs||i<0||i>=P.qs.length)return;P.i=i;P.confirm=false;renderBoss();el('play').scrollTop=0;}
+function bossSubmit(force){
+  if(!P||P.kind!=='boss'||P.busy||P.res||!P.qs)return;if(qsLeft(P.ans)&&!P.confirm&&!force){P.confirm=true;renderBoss();return;}
+  P.busy=true;P.err='';renderBoss();var me=P;
+  Bank.submit(P.play,qsAns(P.ans),'single').then(function(res){if(P!==me)return;P.busy=false;
+    if(!res.ok){P.err=bankError(res);P.confirm=false;renderBoss();return;}
+    stopTimer();P.right=res.right;P.wrong=res.n-res.right;P.xp=P.right*BAL.bossRight-P.wrong*BAL.bossWrong;bossResult();
+  },function(){if(P!==me)return;P.busy=false;P.confirm=false;P.err=bankError(netFail());renderBoss();});
 }
-function bossNext(){if(P.lives<=0||P.i===P.qs.length-1)bossResult();else{P.i++;bossQ();el('play').scrollTop=0;}}
 function bossResult(){
-  stopTimer();var pct=Math.round(P.right/P.qs.length*100),won=P.lives>0&&pct>=60,st=won?starsPct(pct):0;
-  if(won)P.xp+=100;S.xp=Math.max(0,S.xp+P.xp);P.res={pct:pct,won:won,st:st,first:award(P.node,st,500,pct)};renderBossResult();
+  stopTimer();var pct=Math.round(P.right/P.qs.length*100),won=P.wrong<P.lives&&pct>=60,st=won?starsPct(pct):0;
+  if(won)P.xp+=100;S.xp=Math.max(0,S.xp+P.xp);P.res={pct:pct,won:won,st:st,first:award(P.node,st,500,pct)};renderBossResult();showMeme(won);
 }
 function renderBossResult(){
   var won=P.res.won,st=P.res.st,first=P.res.first,w=WORLDS[P.node.w],nx=WORLDS[P.node.w+1];
-  var h='<div class="card center"><div class="eyebrow">'+esc(tx(P.node.name))+'</div><h1>'+(won?L('Chốt thương vụ lớn!','Big deal closed!'):L('Thương vụ thất bại','The deal fell through'))+'</h1>'+starRow(st);
+  var h='<div class="card center"><div class="bossbar" style="justify-content:center">'+bossFig(won?'hurt':'strike')+'</div><div class="eyebrow">'+esc(tx(P.node.name))+'</div><h1>'+(won?L('Chốt thương vụ lớn!','Big deal closed!'):L('Thương vụ thất bại','The deal fell through'))+'</h1>'+starRow(st);
   if(won&&first)h+='<div class="promo-av">'+avatarBig(P.node.w+1,120)+'</div><p><b>'+L('Thăng cấp: ','Promoted: ')+tx(w.rank)+'</b><br>'+L('Nhân vật mới: ','New look: ')+tx(LOOKS[P.node.w+1].n)+(nx?'<br>'+L('Đường mở rộng: ','The road widens: ')+tx(nx.road)+' · '+nx.lanes+L(' làn',' lanes'):'')+'</p>';
-  if(!won)h+='<p class="muted">'+(P.lives<=0?L('Hết mạng. ','Out of lives. '):'')+L('Cần đúng ít nhất 60% và còn mạng. Mua vé đấu lại ở cửa hàng để có thêm mạng.','You need at least 60% with a life left. Buy a retry ticket in the shop for an extra life.')+'</p>';
+  if(!won)h+='<p class="muted">'+(P.wrong>=P.lives?L('Sai '+P.wrong+' câu, hết '+P.lives+' mạng. ','Wrong on '+P.wrong+', all '+P.lives+' lives gone. '):'')+L('Cần đúng ít nhất 60% và sai ít hơn số mạng. Mua vé đấu lại ở cửa hàng để có thêm mạng.','You need at least 60% and fewer wrong answers than lives. Buy a retry ticket in the shop for an extra life.')+'</p>';
   h+='<div class="kpis"><div class="kpi"><span>'+L('Đúng','Correct')+'</span><b>'+P.right+'/'+P.qs.length+'</b></div><div class="kpi"><span>XP</span><b>'+sxp(P.xp)+'</b></div><div class="kpi"><span>'+L('Vốn','Capital')+'</span><b>'+(won&&first?'+'+(has('solar')?625:500)+'k':'—')+'</b></div></div></div>';
   el('play-body').innerHTML=h;playHud();
   el('play-bar').innerHTML='<button class="btn ghost" data-act="replay">'+L('Đánh lại','Fight again')+'</button><button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>';
@@ -1305,8 +1270,8 @@ function bossIntro(node){
   P={node:node,kind:'bossintro',xp:0};openPlay();
   el('play-title').innerHTML=esc(node.id+' · '+tx(node.name));playHud();
   var n=node.w===6?15:12;
-  el('play-body').innerHTML='<div class="card"><span class="tag">'+L('Trùm cuối chương','Chapter boss')+'</span><h1>'+esc(tx(node.name))+'</h1><p>'+L(n+' câu trộn từ mọi chặng'+(node.w===6?' của cả 7 chương':' của chương')+'. Mỗi câu '+bossSec()+' giây'+(has('van')?' (🚐 +10 giây)':'')+'. Mỗi câu trả lời một lần. Bạn có 2 mạng: sai hoặc hết giờ mất 1 mạng. Mỗi câu đúng +'+BAL.bossRight+' XP, mỗi câu sai −'+BAL.bossWrong+' XP. Đúng từ 60% và còn mạng là thắng. Game không hiện đáp án đúng.',
-    n+' mixed questions from '+(node.w===6?'all 7 chapters':'every stage of the chapter')+'. '+bossSec()+' seconds each'+(has('van')?' (🚐 +10 s)':'')+'. One answer per question. You have 2 lives; a wrong answer or a timeout costs one. Each right answer +'+BAL.bossRight+' XP, each wrong one −'+BAL.bossWrong+' XP. Win with 60% correct and a life left. Right answers are not shown.')+'</p><p class="muted small">'+L('Vé đấu lại trong túi: ','Retry tickets you hold: ')+S.inv.retry+'</p></div>';
+  el('play-body').innerHTML='<div class="card"><span class="tag">'+L('Trùm cuối chương','Chapter boss')+'</span><h1>'+esc(tx(node.name))+'</h1><p>'+L(n+' câu trộn từ mọi chặng'+(node.w===6?' của cả 7 chương':' của chương')+'. Tổng thời gian '+bossSec()+' giây × '+n+' câu'+(has('van')?' (🚐 +10 giây mỗi câu)':'')+'. Chọn hết, sửa thoải mái, rồi nộp một lần; hết giờ thì tự nộp. Bạn có 2 mạng: mỗi câu sai hoặc bỏ trống mất 1 mạng. Mỗi câu đúng +'+BAL.bossRight+' XP, mỗi câu sai −'+BAL.bossWrong+' XP. Đúng từ 60% và còn mạng là thắng. Kết quả chỉ báo tổng số câu đúng.',
+    n+' mixed questions from '+(node.w===6?'all 7 chapters':'every stage of the chapter')+'. '+bossSec()+' seconds × '+n+' questions in all'+(has('van')?' (🚐 +10 s each)':'')+'. Answer everything, change freely, then submit once; time up submits for you. You have 2 lives; each wrong or blank answer costs one. Each right answer +'+BAL.bossRight+' XP, each wrong one −'+BAL.bossWrong+' XP. Win with 60% correct and a life left. The result shows only the total right.')+'</p><p class="muted small">'+L('Vé đấu lại trong túi: ','Retry tickets you hold: ')+S.inv.retry+'</p></div>';
   el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Thoát','Quit')+'</button>'+(S.inv.retry>0?'<button class="btn ghost" data-act="bossgo" data-t="1">❤️ '+L('Dùng vé (+1 mạng)','Use a ticket (+1 life)')+'</button>':'')+'<button class="btn" data-act="bossgo">'+L('Bắt đầu','Start')+'</button>';
 }
 
@@ -1549,19 +1514,20 @@ var DUEL_COOL=30000,DUEL_SEC=20,ARTEST=window.__ARENA_TEST||null;   // tests sho
 function arStartDuel(did,tgt){
   var x=arX();if(!Bank||!Bank.duel||!x.state||x.state.status!=='live')return;
   if(Date.now()-AR.lastDuel<(x===AR.prac?10000:DUEL_COOL))return;
-  AR.duel={d:did,tgt:tgt,qs:null,play:null,i:0,pts:0,right:0,left:DUEL_SEC,pick:null,correct:null,busy:true,done:false,def:MK.defenceOf(x.state,did,tgt)};
+  AR.duel={d:did,tgt:tgt,qs:null,play:null,i:0,pts:0,right:0,ans:[],busy:true,done:false,confirm:false,def:MK.defenceOf(x.state,did,tgt)};
   renderArena();var me=AR.duel;
-  Bank.duel(arMyCh()).then(function(res){if(AR.duel!==me)return;me.busy=false;if(!res.ok){me.err=bankError(res);renderArena();return;}me.qs=res.qs;me.play=res.play;arDuelQ();},function(){if(AR.duel===me){me.busy=false;me.err=bankError(netFail());renderArena();}});
+  Bank.duel(arMyCh()).then(function(res){if(AR.duel!==me)return;me.busy=false;if(!res.ok){me.err=bankError(res);renderArena();return;}me.qs=res.qs;me.play=res.play;me.ans=me.qs.map(function(){return null;});
+    me.total=DUEL_SEC*me.qs.length;me.left=me.total;clearInterval(AR.dt);
+    AR.dt=setInterval(function(){var D=AR.duel;if(D!==me||D.done){clearInterval(AR.dt);return;}D.left--;var b=el('dbar'),c=el('dclock');if(b)b.style.width=Math.max(0,D.left/D.total*100)+'%';if(c)c.textContent=mmss(D.left*1000);if(D.left<=0&&!D.busy){clearInterval(AR.dt);arDuelSubmit(true);}},1000);renderArena();},
+    function(){if(AR.duel===me){me.busy=false;me.err=bankError(netFail());renderArena();}});
 }
-function arDuelQ(){var D=AR.duel;D.pick=null;D.ans=false;D.ok=false;D.e='';D.left=DUEL_SEC;clearInterval(AR.dt);
-  AR.dt=setInterval(function(){if(!AR.duel){clearInterval(AR.dt);return;}D.left--;var b=el('dbar');if(b)b.style.width=(D.left/DUEL_SEC*100)+'%';if(D.left<=0){clearInterval(AR.dt);arDuelAnswer(-1);}},1000);renderArena();}
-function arDuelAnswer(i){
-  var D=AR.duel;if(!D||D.ans||D.busy)return;clearInterval(AR.dt);D.pick=i;D.busy=true;renderArena();
-  Bank.bossCheck(D.play,D.i,i).then(function(res){if(AR.duel!==D)return;D.busy=false;if(!res.ok){D.err=bankError(res);D.pick=null;renderArena();return;}
-    D.ans=true;D.ok=!!res.right;D.e=res.e||'';if(res.right){D.right++;D.pts+=12+Math.round(8*Math.max(0,D.left)/DUEL_SEC);}renderArena();},
-    function(){if(AR.duel===D){D.busy=false;D.pick=null;D.err=bankError(netFail());renderArena();}});
+function arDuelGo(i){var D=AR.duel;if(!D||!D.qs||D.done||D.busy||i<0||i>=D.qs.length)return;D.i=i;D.confirm=false;renderArena();}
+function arDuelSubmit(force){var D=AR.duel;if(!D||!D.qs||D.done||D.busy)return;if(qsLeft(D.ans)&&!D.confirm&&!force){D.confirm=true;renderArena();return;}
+  D.busy=true;D.err='';renderArena();
+  Bank.submit(D.play,qsAns(D.ans),'single').then(function(res){if(AR.duel!==D)return;D.busy=false;if(!res.ok){D.err=bankError(res);D.confirm=false;renderArena();return;}
+    D.right=res.right;D.pts=12*res.right+Math.round(8*res.right*Math.max(0,D.left)/D.total);arDuelFinish();},
+    function(){if(AR.duel===D){D.busy=false;D.confirm=false;D.err=bankError(netFail());renderArena();}});
 }
-function arDuelNext(){var D=AR.duel;if(D.i<D.qs.length-1){D.i++;arDuelQ();return;}arDuelFinish();}
 function arDuelFinish(){var D=AR.duel;if(!D||D.done||!D.qs)return;clearInterval(AR.dt);
   D.done=true;D.win=D.pts>D.def;AR.lastDuel=Date.now();var m=arMine();m.n=(m.n||0)+1;m.duels.push({n:m.n,d:D.d,tgt:D.tgt,sc:D.pts});if(m.duels.length>12)m.duels=m.duels.slice(-12);arSendMine();renderArena();}
 
@@ -1713,19 +1679,19 @@ function renderArena(){
 }
 function renderDuel(){
   var D=AR.duel,h='',dd=MK.BY[D.d];el('play-hud').innerHTML='<span class="pill xp">'+D.pts+L(' điểm',' pts')+'</span><span class="pill">🛡 '+Math.round(D.def)+'</span>';
-  h+='<div class="scene"><b>⚔️ '+L('Thách đấu ','Duel vs ')+esc(arName(D.tgt))+'</b> · '+esc(lang==='vi'?dd.vi:dd.en)+'<br><span class="small">'+L('5 câu, mỗi câu 20 giây. Đúng được 12 điểm + thưởng nhanh tới 8 điểm. Vượt điểm phòng thủ ','5 questions, 20 seconds each. A right answer earns 12 points + up to 8 for speed. Beat the defence of ')+'<b>'+Math.round(D.def)+'</b>'+L(' để thắng.',' to win.')+'</span></div>';
+  h+='<div class="scene"><b>⚔️ '+L('Thách đấu ','Duel vs ')+esc(arName(D.tgt))+'</b> · '+esc(lang==='vi'?dd.vi:dd.en)+'<br><span class="small">'+L('5 câu, tổng '+(DUEL_SEC*5)+' giây, nộp một lần. Mỗi câu đúng 12 điểm + thưởng nhanh tới 8 điểm (nộp càng sớm càng nhiều). Vượt điểm phòng thủ ','5 questions, '+(DUEL_SEC*5)+' seconds in all, one submission. Each right answer earns 12 points + up to 8 for speed (submit sooner, earn more). Beat the defence of ')+'<b>'+Math.round(D.def)+'</b>'+L(' để thắng.',' to win.')+'</span></div>';
   if(D.err){el('play-body').innerHTML=h+'<div class="fb bad">'+D.err+'</div>';el('play-bar').innerHTML='<button class="btn" data-act="duelquit">'+L('Về bản đồ','Back to the map')+'</button>';return;}
   if(!D.qs){el('play-body').innerHTML=h+'<p class="loading muted">'+L('Đang lấy câu hỏi…','Fetching questions…')+'</p>';el('play-bar').innerHTML='';return;}
   if(D.done){var dfx=dd.type==='mono'?L('Bạn giành giấy phép độc quyền!','You take the monopoly licence!'):dd.type==='comp'?L('MC của bạn ở quận này giảm 1.','Your MC in this district falls by 1.'):L('Thương hiệu của bạn +1, đối thủ −1.','Your brand +1, the rival −1.');
     h+='<div class="card center"><h1>'+(D.win?L('Thắng!','You win!'):L('Thua rồi','You lost'))+'</h1><div class="kpis"><div class="kpi"><span>'+L('Điểm của bạn','Your score')+'</span><b>'+D.pts+'</b></div><div class="kpi"><span>'+L('Phòng thủ','Defence')+'</span><b>'+Math.round(D.def)+'</b></div><div class="kpi"><span>'+L('Đúng','Right')+'</span><b>'+D.right+'/'+D.qs.length+'</b></div></div><p style="margin-top:10px">'+(D.win?dfx+' '+L('Điểm '+D.pts+' thành điểm phòng thủ mới của bạn ở quận này.','Your '+D.pts+' becomes your new defence here.'):L('Thử lại sau 30 giây, hoặc thách đấu đối thủ khác.','Try again in 30 seconds, or duel another rival.'))+'</p><p class="small muted">'+L('Bản đồ cập nhật trong vài giây.','The map updates in a few seconds.')+'</p></div>';
     el('play-body').innerHTML=h;el('play-bar').innerHTML='<button class="btn" data-act="duelquit">'+L('Về bản đồ','Back to the map')+'</button>';return;}
-  var q=D.qs[D.i],done=D.ans;
-  h+='<div class="dots" aria-hidden="true">';D.qs.forEach(function(_,i){h+='<i class="'+(i<D.i||(i===D.i&&done)?'done':i===D.i?'cur':'')+'"></i>';});h+='</div>';
-  h+='<div class="timer" aria-hidden="true"><i id="dbar" style="width:'+(D.left/DUEL_SEC*100)+'%"></i></div><div class="card"><span class="tag">'+L('Câu ','Question ')+(D.i+1)+'/'+D.qs.length+' · '+L('Chương ','Chapter ')+q.ch+'</span>'+viBadge()+'<h3 class="q">'+esc(q.q)+'</h3>';
-  q.opts.forEach(function(o,i){var c='';if(done){if(i===D.pick)c=D.ok?' ok':' no';}else if(D.pick===i)c=' sel';h+='<button class="opt'+c+'" data-act="duelans" data-i="'+i+'"'+(done||D.busy?' disabled':'')+'>'+esc(o)+'</button>';});
-  if(done)h+='<div class="fb '+(D.ok?'good':'bad')+'"><b>'+(D.ok?L('Chính xác!','Correct!'):D.pick===-1?L('Hết giờ!','Time is up!'):L('Sai rồi!','Wrong!'))+'</b>'+(D.e?esc(D.e):'')+'</div>';
-  el('play-body').innerHTML=h+'</div>';
-  el('play-bar').innerHTML='<button class="btn ghost" data-act="duelgiveup">'+L('Bỏ cuộc','Give up')+'</button>'+(done?'<button class="btn" data-act="duelnext">'+(D.i===D.qs.length-1?L('Xem kết quả','See the result'):L('Câu tiếp','Next question'))+'</button>':'');
+  var q=D.qs[D.i];
+  el('play-hud').innerHTML='<span class="pill">⏱ <b id="dclock">'+mmss(D.left*1000)+'</b></span><span class="pill">🛡 '+Math.round(D.def)+'</span>';
+  h+=qsDots(D.qs.length,D.ans,D.i,'dugo');
+  h+='<div class="timer" aria-hidden="true"><i id="dbar" style="width:'+(D.left/D.total*100)+'%"></i></div><div class="card"><span class="tag">'+L('Câu ','Question ')+(D.i+1)+'/'+D.qs.length+' · '+L('Chương ','Chapter ')+q.ch+'</span>'+viBadge()+'<h3 class="q">'+esc(q.q)+'</h3>';
+  q.opts.forEach(function(o,i){h+='<button class="opt'+(D.ans[D.i]===i?' sel':'')+'" data-act="duelans" data-i="'+i+'"'+(D.busy?' disabled':'')+'>'+esc(o)+'</button>';});
+  el('play-body').innerHTML=h+'</div>'+qsNote(D.ans);
+  el('play-bar').innerHTML=qsBar({i:D.i,n:D.qs.length,ans:D.ans,pre:'du',busy:D.busy,confirm:D.confirm,quit:'<button class="btn ghost" data-act="duelgiveup">'+L('Bỏ cuộc','Give up')+'</button>'});
 }
 function openArena(){closeSheet();P={kind:'arena',xp:0,node:{id:'',name:V('','')}};if(AR.view==='practice'&&!(AR.prac&&AR.prac.cfg.status==='live'))AR.view='class';AR.duel=null;openPlay();renderArena();}
 function arBanner(){
@@ -1813,8 +1779,8 @@ function topTitle(){return S.titles.length?Math.max.apply(null,S.titles):0;}
 function titleName(n){return 'Nghịch Thiên '+ROMAN[n-1];}
 function renderTrials(){
   var h='<div class="who"><div class="face" aria-hidden="true">🌀</div><div><b>'+L('Vùng Ma Luyện','The Ma Luyện realms')+'</b><span class="muted small">'+L('Mỗi chương một vùng, mở khi thắng Trùm của chương đó.','One realm per chapter, opened by beating that chapter\'s boss.')+'</span></div></div>';
-  h+='<p class="small">'+L('5 câu khó trộn từ các chương đã qua · <b>1 mạng · 1 lần duy nhất</b>. Sương mù che đồng hồ, đáp án đổi chỗ giữa chừng, không dùng vật phẩm. Bắt đầu rồi thì thoát giữa chừng cũng tính là thua. Qua cả 5 câu: danh hiệu <b>⚡ Nghịch Thiên</b> hiện cạnh tên trên bảng xếp hạng. Thua: bị <b>👻 Ma ám</b> (sương mù phủ đường) cho tới khi qua chặng tiếp theo.',
-    '5 hard mixed questions from the chapters you reached · <b>1 life · 1 attempt only</b>. Fog hides the clock, the options swap mid-way, no items. Leaving after the start counts as a loss. Clear all 5: the title <b>⚡ Nghịch Thiên</b> beside your name on the leaderboard. Lose: <b>👻 haunted</b> (fog over your road) until you clear your next stage.')+'</p><div class="rows">';
+  h+='<p class="small">'+L('5 câu khó trộn từ các chương đã qua, nộp một lần · <b>1 mạng (phải đúng cả 5) · 1 lần duy nhất</b>. Sương mù che đồng hồ, đáp án đổi chỗ giữa chừng, không dùng vật phẩm. Bắt đầu rồi thì thoát giữa chừng cũng tính là thua. Qua cả 5 câu: danh hiệu <b>⚡ Nghịch Thiên</b> hiện cạnh tên trên bảng xếp hạng. Thua: bị <b>👻 Ma ám</b> (sương mù phủ đường) cho tới khi qua chặng tiếp theo.',
+    '5 hard mixed questions from the chapters you reached, handed in once · <b>1 life (all 5 right) · 1 attempt only</b>. Fog hides the clock, the options swap mid-way, no items. Leaving after the start counts as a loss. Clear all 5: the title <b>⚡ Nghịch Thiên</b> beside your name on the leaderboard. Lose: <b>👻 haunted</b> (fog over your road) until you clear your next stage.')+'</p><div class="rows">';
   for(var c=1;c<=7;c++){var st=S.trial[c],b;
     if(st==='pass')b='<b class="nt-t">⚡ '+titleName(c)+'</b>';else if(st==='fail')b='<span class="muted">'+L('Đã thử · thất bại','Tried · failed')+'</span>';
     else if(!trialOpen(c))b='<span class="muted">🔒 '+L('Thắng Trùm Chương ','Beat the Chapter ')+c+L('',' boss')+'</span>';else b='<button class="btn mini" data-act="trialgo" data-c="'+c+'">'+L('Vào luyện','Enter')+'</button>';
@@ -1822,43 +1788,42 @@ function renderTrials(){
   el('sheet').innerHTML=h+'</div><div class="acts" style="margin-top:12px"><button class="btn" data-act="closesheet">'+L('Đóng','Close')+'</button></div>';
 }
 function startTrial(ch){if(S.trial[ch]||!trialOpen(ch)||walking)return;closeSheet();
-  P={kind:'trial',ch:ch,qs:null,i:0,xp:0,node:{id:'',name:V('Vùng Ma Luyện · Chương '+ch,'Ma Luyện realm · Chapter '+ch)},busy:false};openPlay();playLoading(tx(P.node.name));
+  P={kind:'trial',ch:ch,qs:null,i:0,xp:0,node:{id:'',name:V('Vùng Ma Luyện · Chương '+ch,'Ma Luyện realm · Chapter '+ch)},busy:false,ans:[],confirm:false,err:''};openPlay();playLoading(tx(P.node.name));
   var me=P;Bank.duel(ch).then(function(res){if(P!==me)return;if(!res.ok){playFail(res);return;}
     S.trial[ch]='fail';persist();          // one chance: once the questions are dealt, leaving counts as a lost attempt
-    P.play=res.play;P.qs=res.qs.slice(0,TRIAL_N);trialQ();},function(){if(P===me)playFail(netFail());});
+    P.play=res.play;P.qs=res.qs.slice(0,TRIAL_N);P.ans=P.qs.map(function(){return null;});P.ord=P.qs.map(function(q){return q.opts.map(function(_,i){return i;});});P.swapped=false;
+    P.total=((ARTEST&&ARTEST.trialSec)||TRIAL_SEC)*P.qs.length;P.left=P.total;stopTimer();
+    timerH=setInterval(function(){if(!P||P.kind!=='trial'||P.res){stopTimer();return;}P.left--;var bar=el('tbar');if(bar)bar.style.width=Math.max(0,P.left/P.total*100)+'%';
+      if(!P.busy){if(!P.swapped&&P.left<=Math.floor(P.total/2)){P.swapped=true;P.ord=P.ord.map(function(o){var n;do{n=shuffle(o);}while(n.join()===o.join()&&o.length>1);return n;});renderTrial(true);}else if(P.total-P.left===4)renderTrial();}
+      if(P.left<=0&&!P.busy){stopTimer();trialSubmit(true);}},1000);renderTrial();},function(){if(P===me)playFail(netFail());});
 }
-function trialQ(){var q=P.qs[P.i];P.pick=null;P.done=false;P.ok=false;P.err='';P.total=(ARTEST&&ARTEST.trialSec)||TRIAL_SEC;P.left=P.total;P.ord=q.opts.map(function(_,i){return i;});P.swapped=false;stopTimer();
-  timerH=setInterval(function(){if(!P||P.kind!=='trial'){stopTimer();return;}P.left--;var bar=el('tbar');if(bar)bar.style.width=Math.max(0,P.left/P.total*100)+'%';
-    if(!P.busy&&!P.done){if(!P.swapped&&P.left<=Math.floor(P.total/2)){P.swapped=true;var o=P.ord.slice();do{P.ord=shuffle(o);}while(P.ord.join()===o.join()&&o.length>1);renderTrial(true);}else if(P.total-P.left===4)renderTrial();}
-    if(P.left<=0&&!P.busy&&!P.done){stopTimer();trialAnswer(-1);}},1000);renderTrial();}
 function renderTrial(swap){var q=P.qs[P.i],h='',fog=P.total-P.left>=4;
   el('play-title').innerHTML=esc(tx(P.node.name));playHud('<span class="pill lives">❤</span>');
-  h+='<div class="dots" aria-hidden="true">'+P.qs.map(function(_,i){return '<i class="'+(i<P.i||(i===P.i&&P.done)?'done':i===P.i?'cur':'')+'"></i>';}).join('')+'</div>';
-  h+='<div class="timer'+(fog?' fog':'')+'" aria-hidden="true"><i id="tbar" style="width:'+(P.left/P.total*100)+'%"></i></div>'+(fog&&!P.done?'<p class="small muted fogline">🌫️ '+L('Sương mù che mất đồng hồ…','Fog hides the clock…')+'</p>':'');
+  h+=qsDots(P.qs.length,P.ans,P.i,'trgo');
+  h+='<div class="timer'+(fog?' fog':'')+'" aria-hidden="true"><i id="tbar" style="width:'+(P.left/P.total*100)+'%"></i></div>'+(fog?'<p class="small muted fogline">🌫️ '+L('Sương mù che mất đồng hồ…','Fog hides the clock…')+'</p>':'');
   h+='<div class="card trialcard'+(swap?' swap':'')+'"><span class="tag">🌀 '+L('Câu ','Question ')+(P.i+1)+'/'+P.qs.length+' · '+L('Chương ','Chapter ')+q.ch+'</span>'+viBadge()+'<h3 class="q">'+esc(q.q)+'</h3>';
-  P.ord.forEach(function(i){var c='';if(P.done&&i===P.pick)c=P.ok?' ok':' no';else if(P.pick===i)c=' sel';
-    h+='<button class="opt'+c+'" data-act="trialans" data-i="'+i+'"'+(P.done||P.busy?' disabled':'')+'>'+esc(q.opts[i])+'</button>';});
-  if(P.swapped&&!P.done)h+='<p class="small muted">🔀 '+L('Ảo ảnh: các đáp án vừa đổi chỗ!','Illusion: the options just swapped!')+'</p>';
-  if(P.done&&P.ok)h+='<div class="fb good"><b>'+L('Vượt qua ảo ảnh! +','Through the illusion! +')+BAL.trialQXP+' XP'+'</b></div>';
+  P.ord[P.i].forEach(function(i){h+='<button class="opt'+(P.ans[P.i]===i?' sel':'')+'" data-act="trialans" data-i="'+i+'"'+(P.busy?' disabled':'')+'>'+esc(q.opts[i])+'</button>';});
+  if(P.swapped)h+='<p class="small muted">🔀 '+L('Ảo ảnh: các đáp án vừa đổi chỗ!','Illusion: the options just swapped!')+'</p>';
   if(P.err)h+='<div class="fb bad">'+P.err+'</div>';
-  el('play-body').innerHTML=h+'</div>';
-  el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Bỏ cuộc','Give up')+'</button>'+(P.done&&P.ok?'<button class="btn" data-act="trialnext">'+(P.i===P.qs.length-1?L('Xem kết quả','See results'):L('Câu tiếp','Next question'))+'</button>':P.busy?'<button class="btn" disabled>'+L('Đang kiểm tra…','Checking…')+'</button>':'');
+  el('play-body').innerHTML=h+'</div>'+qsNote(P.ans);
+  el('play-bar').innerHTML=qsBar({i:P.i,n:P.qs.length,ans:P.ans,pre:'tr',busy:P.busy,confirm:P.confirm,quit:'<button class="btn ghost" data-act="quit">'+L('Bỏ cuộc','Give up')+'</button>'});
 }
-function trialAnswer(i){if(!P||P.kind!=='trial'||P.done||P.busy)return;P.pick=i;P.busy=true;P.err='';renderTrial();var me=P;
-  Bank.bossCheck(P.play,P.i,i).then(function(res){if(P!==me)return;P.busy=false;
-    if(!res.ok){P.err=bankError(res);P.pick=null;renderTrial();return;}
-    stopTimer();P.done=true;P.ok=!!res.right;if(P.ok){P.xp+=BAL.trialQXP;renderTrial();}else trialEnd(false);
-  },function(){if(P!==me)return;P.busy=false;P.pick=null;P.err=bankError(netFail());renderTrial();});}
-function trialNext(){if(!P.done||!P.ok)return;if(P.i===P.qs.length-1)trialEnd(true);else{P.i++;trialQ();el('play').scrollTop=0;}}
+function trialGo(i){if(!P||P.kind!=='trial'||P.busy||P.res||!P.qs||i<0||i>=P.qs.length)return;P.i=i;P.confirm=false;renderTrial();el('play').scrollTop=0;}
+function trialSubmit(force){if(!P||P.kind!=='trial'||P.busy||P.res||!P.qs)return;if(qsLeft(P.ans)&&!P.confirm&&!force){P.confirm=true;renderTrial();return;}
+  P.busy=true;P.err='';renderTrial();var me=P;
+  Bank.submit(P.play,qsAns(P.ans),'single').then(function(res){if(P!==me)return;P.busy=false;
+    if(!res.ok){P.err=bankError(res);P.confirm=false;renderTrial();return;}
+    stopTimer();P.right=res.right;var won=res.right===res.n;if(won)P.xp=BAL.trialQXP*res.n;trialEnd(won);
+  },function(){if(P!==me)return;P.busy=false;P.confirm=false;P.err=bankError(netFail());renderTrial();});}
 function trialEnd(won){stopTimer();var ch=P.ch;
   if(won){S.trial[ch]='pass';if(S.titles.indexOf(ch)<0)S.titles.push(ch);P.xp+=BAL.trialPassXP;}
   else{S.trial[ch]='fail';S.curse={ch:ch,t:Date.now()};P.xp=0;}
   S.xp+=P.xp;persist();P.res={won:won};renderTrialResult();hud();}
 function renderTrialResult(){var won=P.res.won;
   el('play-body').innerHTML='<div class="card center trialres '+(won?'won':'lost')+'"><div class="eyebrow">'+esc(tx(P.node.name))+'</div>'+
-    (won?'<div class="nt-big">⚡</div><h1>'+titleName(P.ch)+'</h1><p>'+L('Bạn đã nghịch thiên cải mệnh: qua cả 5 câu với một mạng. Danh hiệu hiện cạnh tên bạn trên bảng xếp hạng.','You defied fate: all 5 with a single life. The title now shows beside your name on the leaderboard.')+'</p>'
+    (won?'<div class="nt-big">⚡</div><h1>'+titleName(P.ch)+'</h1><p>'+L('Bạn đã nghịch thiên cải mệnh: đúng cả 5 câu với một mạng. Danh hiệu hiện cạnh tên bạn trên bảng xếp hạng.','You defied fate: all 5 with a single life. The title now shows beside your name on the leaderboard.')+'</p>'
         :'<div class="nt-big ghost">👻</div><h1>'+L('Bị Ma ám!','Haunted!')+'</h1><p>'+L('Sương mù phủ lên con đường của bạn. Qua một chặng bất kỳ để giải lời nguyền. Vùng này đã dùng hết lượt.','Fog covers your road. Clear any stage to lift the curse. This realm\'s one attempt is used.')+'</p>')+
-    '<div class="kpis"><div class="kpi"><span>'+L('Đúng','Correct')+'</span><b>'+(won?P.qs.length:P.i)+'/'+P.qs.length+'</b></div><div class="kpi"><span>XP</span><b>+'+P.xp+'</b></div></div></div>';
+    '<div class="kpis"><div class="kpi"><span>'+L('Đúng','Correct')+'</span><b>'+(P.right||0)+'/'+P.qs.length+'</b></div><div class="kpi"><span>XP</span><b>+'+P.xp+'</b></div></div></div>';
   playHud();el('play-bar').innerHTML='<button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>';
 }
 function trialQuit(){if(P&&P.kind==='trial'&&P.qs&&!P.res){S.trial[P.ch]='fail';S.curse={ch:P.ch,t:Date.now()};persist();toast(L('Bỏ cuộc giữa chừng: bị Ma ám 👻','Gave up mid-way: haunted 👻'));}}
@@ -2015,20 +1980,22 @@ function chScan(){if(!chOn())return;var m=chMy(),now=Date.now(),me=cloud.uid,cha
   tmScan();
 }
 function chStart(id,opp,cid){var m=chMy();AR.inv=null;
-  AR.cg={id:id,opp:opp,cid:cid,pub:null,play:null,ans:{},rt:{},busy:false,done:false,t0:0,draft:{}};m.play={id:id,opp:opp,until:Date.now()+CH_GAME+15000};chSend();
+  AR.cg={id:id,opp:opp,cid:cid,pub:null,play:null,ans:{},busy:false,done:false,t0:0,draft:{},confirm:false};m.play={id:id,opp:opp,until:Date.now()+CH_GAME+15000};chSend();
   if(!(P&&P.kind==='arena'))openArena();AR.tab='chal';renderArena();var g=AR.cg;
   Bank.case(cid).then(function(res){if(AR.cg!==g)return;if(!res.ok){g.err=bankError(res);renderArena();return;}g.pub=res.pub;g.play=res.play;g.share=res.share;g.t0=Date.now();g.lim=(ARTEST&&ARTEST.chSec?ARTEST.chSec*1000:CH_GAME);renderArena();},
     function(){if(AR.cg===g){g.err=bankError(netFail());renderArena();}});}
-function chPart(i,val){var g=AR.cg;if(!g||g.done||g.busy||g.ans[i]!==undefined||!g.pub)return;var q=g.pub.parts[i];
-  if(q.type==='num'&&!String(val).trim()){toast(L('Nhập một con số.','Type a number.'));return;}
-  g.busy=true;g.ans[i]=val;renderArena();
-  Bank.caseCheck(g.play,i,val).then(function(res){if(AR.cg!==g)return;g.busy=false;if(!res.ok&&res.error!=='done'){delete g.ans[i];g.err=bankError(res);renderArena();return;}
-    g.rt[i]=!!res.right;g.err='';if(Object.keys(g.rt).length===g.pub.parts.length)chFinish();else renderArena();},
-    function(){if(AR.cg===g){g.busy=false;delete g.ans[i];g.err=bankError(netFail());renderArena();}});}
-function chFinish(){var g=AR.cg;if(!g||g.done||!g.pub)return;var n=g.pub.parts.length,r=Object.keys(g.rt).filter(function(k){return g.rt[k];}).length;
+function caseCollect(g,mine){[].slice.call(document.querySelectorAll('#play-body input.cin')).forEach(function(inp){g.draft[inp.dataset.i]=inp.value;});
+  var out={};g.pub.parts.forEach(function(q,i){if(mine&&!mine(i))return;if(q.type==='num'){var v=String(g.draft[i]||'').trim();if(v)out[i]=v;}else if(g.ans[i]!==undefined)out[i]=g.ans[i];});return out;}
+function chSubmit(force){var g=AR.cg;if(!g||g.done||g.busy||!g.pub)return;var a=caseCollect(g),n=g.pub.parts.length,k=Object.keys(a).length;
+  if(k<n&&!g.confirm&&!force){g.confirm=true;renderArena();return;}
+  if(!k){g.right=0;chFinish();return;}
+  g.busy=true;g.err='';renderArena();
+  Bank.caseSubmit(g.play,a).then(function(res){if(AR.cg!==g)return;g.busy=false;if(!res.ok){if(res.error==='done'){g.right=0;chFinish();return;}g.err=bankError(res);g.confirm=false;renderArena();return;}
+    g.right=res.right;g.pr=res.pr||null;chFinish();},function(){if(AR.cg===g){g.busy=false;g.confirm=false;g.err=bankError(netFail());renderArena();}});}
+function chFinish(){var g=AR.cg;if(!g||g.done||!g.pub)return;var n=g.pub.parts.length,r=g.right||0;
   g.done=true;g.pct=Math.round(100*r/n);g.right=r;g.ms=Math.min(g.lim||CH_GAME,Date.now()-g.t0);var m=chMy();
-  m.res=(m.res||[]).concat([{id:g.id,opp:g.opp,pct:g.pct,ms:g.ms,t:Date.now(),cid:g.cid,pr:g.rt,sh:g.share}]).slice(-20);m.play=null;chSend();chScan();renderArena();}
-function chTick(){var g=AR.cg;if(!g||g.done||!g.t0)return;var left=(g.lim||CH_GAME)-(Date.now()-g.t0),e=el('cg-left');if(e)e.textContent=mmss(left);if(left<=0)chFinish();}
+  m.res=(m.res||[]).concat([{id:g.id,opp:g.opp,pct:g.pct,ms:g.ms,t:Date.now(),cid:g.cid,sh:g.share,pr:g.pr||undefined}]).slice(-20);m.play=null;chSend();chScan();renderArena();}
+function chTick(){var g=AR.cg;if(!g||g.done||!g.t0)return;var left=(g.lim||CH_GAME)-(Date.now()-g.t0),e=el('cg-left');if(e)e.textContent=mmss(left);if(left<=0&&!g.busy)chSubmit(true);}
 function chTab(){var m=chMy(),h='',ids=chOnline();
   h+='<div class="card"><span class="tag">🧠 '+L('Đấu trí','Brain duel')+'</span><p class="small" style="margin:0 0 6px">'+L('Thách một bạn cùng lớp giải cùng một tình huống kinh tế (mỗi người một bộ số riêng), 3 phút. Đúng nhiều hơn thắng; bằng nhau thì ai nhanh hơn. Thắng: thương hiệu +1 ở quận cả hai cùng bán, hoặc lấy 10% lãi trung bình một vòng của đối thủ; +'+BAL.chWinXP+' XP.',
       'Challenge a classmate to the same economics case (each with their own numbers), 3 minutes. More right answers win; a tie goes to the faster one. Winning: brand +1 in a district you both sell in, or 10% of the rival\'s average round profit; +'+BAL.chWinXP+' XP.')+'</p>'+
@@ -2044,26 +2011,27 @@ function chTab(){var m=chMy(),h='',ids=chOnline();
   return h;}
 function chInvBox(){var v=AR.inv;if(!v)return '';var m=chMy(),last=(m.dec||0)>=CH_DEC;
   return '<div class="invbox" role="alertdialog"><b>⚔️ '+esc(chName(v.from))+L(' thách đấu bạn!',' challenges you!')+'</b><span class="small">'+L('Đấu trí 3 phút · còn ','3-minute brain duel · ')+'<b id="inv-left">'+mmss(CH_INV-(Date.now()-v.t))+'</b>'+L(' để trả lời',' left to answer')+'</span><div class="acts"><button class="btn ghost" data-act="chno">'+(last?L('Từ chối (tính là thua)','Decline (counts as a loss)'):L('Từ chối','Decline')+' ('+(CH_DEC-(m.dec||0))+')')+'</button><button class="btn" data-act="chyes">'+L('Nhận lời','Accept')+'</button></div></div>';}
+function caseFilled(g,mine){var out={};g.pub.parts.forEach(function(q,i){if(mine&&!mine(i))return;if(q.type==='num'?String(g.draft[i]||'').trim():g.ans[i]!==undefined)out[i]=1;});return out;}
 function renderChal(){var g=AR.cg,h='',fa=document.activeElement,fid=fa&&fa.id&&fa.classList.contains('cin')?fa.id:null;
   el('play-hud').innerHTML='<span class="pill">🧠 '+L('Đấu trí','Brain duel')+'</span>'+(g.t0&&!g.done?'<span class="pill lives">⏱ <b id="cg-left">'+mmss((g.lim||CH_GAME)-(Date.now()-g.t0))+'</b></span>':'');
   [].slice.call(document.querySelectorAll('#play-body input.cin')).forEach(function(inp){g.draft[inp.dataset.i]=inp.value;});
-  h+='<div class="scene"><b>🧠 '+L('Đấu trí với ','Brain duel vs ')+esc(chName(g.opp))+'</b><br><span class="small">'+L('Mỗi phần trả lời một lần. Máy chỉ báo đúng/sai, không hiện đáp án.','One answer per part. You only see right/wrong, never the answer.')+'</span></div>';
+  h+='<div class="scene"><b>🧠 '+L('Đấu trí với ','Brain duel vs ')+esc(chName(g.opp))+'</b><br><span class="small">'+L('Điền mọi phần rồi nộp một lần. Kết quả chỉ báo tổng số phần đúng, không hiện đáp án.','Fill in every part, then submit once. You only see the total right, never the answers.')+'</span></div>';
   if(g.err)h+='<div class="fb bad">'+g.err+'</div>';
   if(!g.pub){el('play-body').innerHTML=h+(g.err?'':'<p class="loading muted">'+L('Đang lấy tình huống…','Fetching the case…')+'</p>');el('play-bar').innerHTML='<button class="btn ghost" data-act="cgquit">'+L('Về bản đồ','Back to the map')+'</button>';return;}
   if(g.done){var n=g.pub.parts.length;
     h+='<div class="card center"><h1>'+(g.out==='win'?L('Thắng!','You win!'):g.out==='lose'?L('Thua rồi','You lost'):g.out==='draw'?L('Hoà!','A draw!'):L('Đã nộp bài','Submitted'))+'</h1><div class="kpis"><div class="kpi"><span>'+L('Bạn','You')+'</span><b>'+g.right+'/'+n+'</b></div><div class="kpi"><span>'+L('Đối thủ','Rival')+'</span><b>'+(g.out?g.opct+'%':'…')+'</b></div><div class="kpi"><span>'+L('Thời gian','Time')+'</span><b>'+mmss(g.ms)+'</b></div></div>'+
       '<p class="small" style="margin-top:8px">'+(g.out?(g.out==='win'?L('+'+BAL.chWinXP+' XP. Bản đồ cập nhật trong vài giây.','+'+BAL.chWinXP+' XP. The map updates in a few seconds.'):L('+'+BAL.chPlayXP+' XP vì đã tham gia.','+'+BAL.chPlayXP+' XP for taking part.')):L('Đang chờ đối thủ nộp bài…','Waiting for your rival to finish…'))+'</p></div>';
     el('play-body').innerHTML=h;el('play-bar').innerHTML='<button class="btn" data-act="cgquit">'+L('Về bản đồ','Back to the map')+'</button>';return;}
-  var p=g.pub;h+='<div class="card casecard"><span class="tag">'+esc(p.cid)+' · '+L('Chương ','Chapter ')+p.ch+'</span><h3 class="q">'+esc(p.title)+'</h3><p>'+esc(p.story)+'</p>';
+  var p=g.pub,n0=p.parts.length;h+='<div class="card casecard"><span class="tag">'+esc(p.cid)+' · '+L('Chương ','Chapter ')+p.ch+'</span><h3 class="q">'+esc(p.title)+'</h3><p>'+esc(p.story)+'</p>';
   if(p.table)h+='<div class="tbl-wrap"><table class="ctable"><tr>'+p.table.head.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr>'+p.table.rows.map(function(r){return '<tr>'+r.map(function(x){return '<td>'+esc(x)+'</td>';}).join('')+'</tr>';}).join('')+'</table></div>';
-  p.parts.forEach(function(q,i){var a=g.ans[i],r=g.rt[i];
+  p.parts.forEach(function(q,i){var a=g.ans[i];
     h+='<div class="cpart"><div class="small"><b>'+(i+1)+'.</b> '+esc(q.q)+(q.unit?' <span class="muted">('+esc(q.unit)+')</span>':'')+'</div>';
-    if(r!==undefined)h+='<div class="cres '+(r?'ok':'no')+'">'+(r?'✓ '+L('Đúng','Right'):'✗ '+L('Sai','Wrong'))+'</div>';
-    else if(q.type==='num')h+='<div class="cin-row"><input class="cin" data-i="'+i+'" id="ci'+i+'" inputmode="decimal" autocomplete="off" aria-label="'+L('Đáp số phần ','Answer part ')+(i+1)+'" value="'+esc(a!==undefined?a:(g.draft[i]||''))+'"'+(a!==undefined||g.busy?' disabled':'')+'><button class="btn mini" data-act="cgnum" data-i="'+i+'"'+(a!==undefined||g.busy?' disabled':'')+'>'+L('Trả lời','Answer')+'</button></div>';
-    else h+='<div>'+q.opts.map(function(o,k){return '<button class="opt'+(a===k?' sel':'')+'" data-act="cgopt" data-i="'+i+'" data-k="'+k+'"'+(a!==undefined||g.busy?' disabled':'')+'>'+esc(o)+'</button>';}).join('')+'</div>';
+    if(q.type==='num')h+='<div class="cin-row"><input class="cin" data-i="'+i+'" id="ci'+i+'" inputmode="decimal" autocomplete="off" aria-label="'+L('Đáp số phần ','Answer part ')+(i+1)+'" value="'+esc(g.draft[i]||'')+'"'+(g.busy?' disabled':'')+'></div>';
+    else h+='<div>'+q.opts.map(function(o,k){return '<button class="opt'+(a===k?' sel':'')+'" data-act="cgopt" data-i="'+i+'" data-k="'+k+'"'+(g.busy?' disabled':'')+'>'+esc(o)+'</button>';}).join('')+'</div>';
     h+='</div>';});
   el('play-body').innerHTML=h+'</div>';
-  el('play-bar').innerHTML='<button class="btn ghost" data-act="cgsubmit">'+L('Nộp bài ngay','Submit now')+'</button>';
+  var left=n0-Object.keys(caseFilled(g)).length;
+  el('play-bar').innerHTML='<button class="btn" data-act="cgsubmit"'+(g.busy?' disabled':'')+'>'+(g.busy?L('Đang chấm…','Marking…'):g.confirm&&left?L('Nộp dù còn '+left+' phần trống?','Submit with '+left+' blank?'):L('Nộp bài','Submit'))+'</button>';
   if(fid&&el(fid)&&!el(fid).disabled){var f=el(fid);f.focus();try{f.setSelectionRange(f.value.length,f.value.length);}catch(e){}}
 }
 
@@ -2105,8 +2073,9 @@ var TM_LIST=[{id:'1T3',ch:1},{id:'1T4',ch:1},{id:'2T3',ch:2},{id:'2T4',ch:2},{id
 function tmPickCase(minCh){var all=TM_LIST.filter(function(c){return c.ch<=minCh;}),top=all.filter(function(c){return c.ch===minCh;});return pickOf(top.length?top:all);}
 function tmMine(i){var t=AR.tm,q=t&&t.pub&&t.pub.parts[i];if(!q)return false;return q.role==='team'?t.lead===cloud.uid:(t.roles[q.role]||[]).indexOf(cloud.uid)>=0;}
 function tmRoleOf(id){var t=AR.tm,out=[];['A','B','C'].forEach(function(r){if((t.roles[r]||[]).indexOf(id)>=0)out.push(r);});return out;}
-function tmRts(){var t=AR.tm,m={};if(!t)return m;t.members.forEach(function(id){var d=id===cloud.uid?{tres:{id:t.id,rt:t.rt}}:chDoc(id);if(d&&d.tres&&d.tres.id===t.id)Object.keys(d.tres.rt||{}).forEach(function(k){m[k]=!!d.tres.rt[k];});});return m;}
-function tmScore(rt,pub){var own=[],team=[];pub.parts.forEach(function(q,i){(q.role==='team'?team:own).push(!!rt[i]);});var f=function(a){return a.length?a.filter(Boolean).length/a.length:0;};return {pct:Math.round(40*f(own)+60*f(team)),own:Math.round(100*f(own)),team:Math.round(100*f(team))};}
+function tmSubs(){var t=AR.tm,m={};if(!t)return m;t.members.forEach(function(id){var d=id===cloud.uid?{tres:t.sub?{id:t.id,own:t.sub.own,team:t.sub.team}:null}:chDoc(id);if(d&&d.tres&&d.tres.id===t.id)m[id]={own:d.tres.own||{r:0,n:0},team:d.tres.team||{r:0,n:0}};});return m;}   // who has handed in, with their totals only
+function tmScore(subs,pub){var on=0,tn=0,or=0,tr=0;pub.parts.forEach(function(q){if(q.role==='team')tn++;else on++;});Object.keys(subs).forEach(function(id){or+=subs[id].own.r;tr+=subs[id].team.r;});   // a part nobody handed in counts as wrong
+  var fo=on?Math.min(1,or/on):0,ft=tn?Math.min(1,tr/tn):0;return {pct:Math.round(40*fo+60*ft),own:Math.round(100*fo),team:Math.round(100*ft)};}
 function tmInvite(){var m=chMy(),ids=Object.keys(AR.tpick||{}).filter(function(id){return AR.tpick[id]&&!chWhy(id);}).slice(0,2);if(!ids.length||m.tinv||AR.tm)return;
   m.tinv={id:'T'+cloud.uid+'-'+Date.now(),to:ids,t:Date.now()};AR.tpick={};chSend();toast(L('Đã mời ','Invited ')+ids.map(chName).join(', '));renderArena();}
 function tmCancel(){var m=chMy();m.tinv=null;chSend();renderArena();}
@@ -2115,27 +2084,28 @@ function tmAnswer(ok){var v=AR.tinv;if(!v)return;var m=chMy();AR.tinv=null;m.tre
 function tmStart(){var m=chMy(),v=m.tinv;if(!v||AR.tm)return;m.play={id:v.id,until:Date.now()+((ARTEST&&ARTEST.tmSec?ARTEST.tmSec*1000:TM_GAME))+20000};var rp=tmReplies(),acc=v.to.filter(function(id){return rp[id]==='yes';});if(!acc.length)return;
   var ms=[cloud.uid].concat(acc),n=ms.length,roles={A:[ms[0]],B:[ms[1]],C:[n===3?ms[2]:ms[0]]};
   var minCh=Math.max(1,Math.min.apply(null,[m.ch||1].concat(acc.map(function(id){var d=chDoc(id);return (d&&d.ch)||1;})))),cs=tmPickCase(minCh);
-  var g={id:v.id,lead:cloud.uid,cid:cs.id,members:ms,roles:roles,pub:null,play:null,rt:{},t0:0,lim:(ARTEST&&ARTEST.tmSec?ARTEST.tmSec*1000:TM_GAME),done:false,draft:{}};AR.tm=g;m.tinv=null;
+  var g={id:v.id,lead:cloud.uid,cid:cs.id,members:ms,roles:roles,pub:null,play:null,ans:{},t0:0,lim:(ARTEST&&ARTEST.tmSec?ARTEST.tmSec*1000:TM_GAME),done:false,draft:{}};AR.tm=g;m.tinv=null;
   if(!(P&&P.kind==='arena'))openArena();AR.tab='chal';renderArena();
   Bank.case(cs.id,{members:acc,roles:roles}).then(function(res){if(AR.tm!==g)return;if(!res.ok){g.err=bankError(res);renderArena();return;}
     g.pub=res.pub;g.play=res.play;g.share=res.share;g.t0=Date.now();m.team={id:g.id,cid:g.cid,members:ms,roles:roles,pub:res.pub,share:res.share,t0:g.t0,lim:g.lim};chSend();renderArena();},
     function(){if(AR.tm===g){g.err=bankError(netFail());renderArena();}});}
-function tmJoin(lead,t){var m0=chMy();m0.play={id:t.id,until:(t.t0||Date.now())+(t.lim||TM_GAME)+20000};chSend();var g={id:t.id,lead:lead,cid:t.cid,members:t.members,roles:t.roles,pub:t.pub,play:null,rt:{},t0:t.t0,lim:t.lim,done:false,draft:{}};AR.tm=g;AR.twait=null;
+function tmJoin(lead,t){var m0=chMy();m0.play={id:t.id,until:(t.t0||Date.now())+(t.lim||TM_GAME)+20000};chSend();var g={id:t.id,lead:lead,cid:t.cid,members:t.members,roles:t.roles,pub:t.pub,play:null,ans:{},t0:t.t0,lim:t.lim,done:false,draft:{}};AR.tm=g;AR.twait=null;
   if(!(P&&P.kind==='arena'))openArena();AR.tab='chal';
   Bank.caseJoin(t.share,t.cid,{lead:lead,roles:t.roles}).then(function(res){if(AR.tm!==g)return;if(!res.ok){g.err=bankError(res);renderArena();return;}g.play=res.play;renderArena();},function(){if(AR.tm===g){g.err=bankError(netFail());renderArena();}});
   renderArena();}
-function tmPart(i,val){var g=AR.tm;if(!g||g.done||g.busy||!g.play||!tmMine(i)||g.rt[i]!==undefined)return;var q=g.pub.parts[i];
-  if(q.type==='num'&&!String(val).trim()){toast(L('Nhập một con số.','Type a number.'));return;}
-  g.busy=true;g.ans=g.ans||{};g.ans[i]=val;renderArena();
-  Bank.caseCheck(g.play,i,val).then(function(res){if(AR.tm!==g)return;g.busy=false;if(!res.ok&&res.error!=='done'){delete g.ans[i];g.err=res.error==='not_yours'?L('Phần này không thuộc vai của bạn.','This part is not your role\'s.'):bankError(res);renderArena();return;}
-    g.rt[i]=!!res.right;g.err='';var m=chMy();m.tres={id:g.id,rt:g.rt};chSend();tmCheckEnd();renderArena();},
-    function(){if(AR.tm===g){g.busy=false;delete g.ans[i];g.err=bankError(netFail());renderArena();}});}
+function tmSubmit(force){var g=AR.tm;if(!g||g.done||g.busy||g.sub||!g.play||!g.pub)return;var a=caseCollect(g,tmMine),mine=g.pub.parts.filter(function(_,i){return tmMine(i);}).length,k=Object.keys(a).length;
+  if(k<mine&&!g.confirm&&!force){g.confirm=true;renderArena();return;}
+  var fin=function(res){g.sub={own:res.own||{r:0,n:0},team:res.team||{r:0,n:0}};var m=chMy();m.tres={id:g.id,own:g.sub.own,team:g.sub.team,cid:g.cid,sh:g.share,pr:res.pr||undefined};chSend();tmCheckEnd();renderArena();};
+  if(!k){fin({});return;}
+  g.busy=true;g.err='';renderArena();
+  Bank.caseSubmit(g.play,a).then(function(res){if(AR.tm!==g)return;g.busy=false;if(!res.ok&&res.error!=='done'){g.err=res.error==='not_yours'?L('Phần này không thuộc vai của bạn.','This part is not your role\'s.'):bankError(res);g.confirm=false;renderArena();return;}fin(res.ok?res:{});},
+    function(){if(AR.tm===g){g.busy=false;g.confirm=false;g.err=bankError(netFail());renderArena();}});}
 function tmNote(){var g=AR.tm,e=el('tmnote');if(!g||!e)return;var m=chMy();m.note={id:g.id,txt:String(e.value).slice(0,200)};g.myNote=m.note.txt;chSend();toast(L('Đã gửi ghi chú cho đội.','Note sent to your team.'));renderArena();}
-function tmCheckEnd(force){var g=AR.tm;if(!g||g.done||!g.pub||g.lead!==cloud.uid)return;var rt=tmRts(),all=Object.keys(rt).length>=g.pub.parts.length,late=g.t0&&Date.now()-g.t0>=g.lim;
-  if(!(all||late||force))return;var sc=tmScore(rt,g.pub),m=chMy();g.done=sc;m.team=Object.assign({},m.team,{done:{pct:sc.pct,own:sc.own,team:sc.team,rt:rt,t:Date.now()}});chSend();tmReward(sc);}
+function tmCheckEnd(force){var g=AR.tm;if(!g||g.done||!g.pub||g.lead!==cloud.uid)return;var subs=tmSubs(),all=Object.keys(subs).length>=g.members.length,late=g.t0&&Date.now()-g.t0>=g.lim+6000;
+  if(!(all||late||force))return;var sc=tmScore(subs,g.pub),m=chMy();g.done=sc;m.team=Object.assign({},m.team,{done:{pct:sc.pct,own:sc.own,team:sc.team,t:Date.now()}});chSend();tmReward(sc);}
 function tmReward(sc){var g=AR.tm;if(!g)return;S.chx=S.chx||{};if(S.chx[g.id])return;S.chx[g.id]=1;S.cst=S.cst||{};
-  var own=g.pub.parts.map(function(q,i){return i;}).filter(function(i){var q=g.pub.parts[i];return q.role!=='team'&&tmMine(i);}),rt=tmRts();
-  S.cst.team=(S.cst.team||0)+1;S.cst.tpn=(S.cst.tpn||0)+own.length;S.cst.tpr=(S.cst.tpr||0)+own.filter(function(i){return rt[i];}).length;
+  var own=g.pub.parts.filter(function(q,i){return q.role!=='team'&&tmMine(i);}).length,ok=g.sub?g.sub.own.r:0;
+  S.cst.team=(S.cst.team||0)+1;S.cst.tpn=(S.cst.tpn||0)+own;S.cst.tpr=(S.cst.tpr||0)+Math.min(own,ok);
   S.xp+=sc.pct>=MK.TEAM_PASS?BAL.tmPassXP:BAL.tmPlayXP;persist();hud();achCheck();}
 function tmScan(){if(!chOn())return;var m=chMy(),now=Date.now(),me=cloud.uid,changed=false;
   if(!AR.tinv&&!AR.tm&&!AR.cg&&!m.tinv&&!AR.twait){chOnline().forEach(function(id){var d=chDoc(id);if(AR.tinv||!d.tinv||d.tinv.to.indexOf(me)<0||now-d.tinv.t>=TM_INV)return;if(m.treply&&m.treply.id===d.tinv.id)return;AR.tinv={id:d.tinv.id,from:id,t:d.tinv.t};changed=true;});}
@@ -2144,13 +2114,13 @@ function tmScan(){if(!chOn())return;var m=chMy(),now=Date.now(),me=cloud.uid,cha
   if(AR.twait&&!AR.tm&&now-AR.twait.t>TM_INV+60000){AR.twait=null;changed=true;}
   if(m.tinv&&now-m.tinv.t>=TM_INV+30000&&!AR.tm){m.tinv=null;chSend();changed=true;}
   var g=AR.tm;if(g&&!g.done){if(g.lead===me)tmCheckEnd();else{var ld=chDoc(g.lead),dn=ld&&ld.team&&ld.team.id===g.id&&ld.team.done;if(dn){g.done={pct:dn.pct,own:dn.own,team:dn.team};tmReward(g.done);changed=true;}}}
-  if(g&&!g.done){var e=el('tm-left');if(e&&g.t0)e.textContent=mmss(g.lim-(now-g.t0));if(g.t0&&now-g.t0>=g.lim+2000&&g.lead===me)tmCheckEnd(true);}
+  if(g&&!g.done){var e=el('tm-left');if(e&&g.t0)e.textContent=mmss(g.lim-(now-g.t0));if(g.t0&&now-g.t0>=g.lim&&!g.sub&&!g.busy)tmSubmit(true);if(g.t0&&now-g.t0>=g.lim+6000&&g.lead===me)tmCheckEnd(true);}
   if(changed&&P&&P.kind==='arena')renderArena();else if(changed&&!P)panel();
-  if(g&&!g.done&&P&&P.kind==='arena'&&AR.tab==='chal'&&!document.activeElement.matches('input,textarea')&&JSON.stringify(tmRts())!==g.lastRts){g.lastRts=JSON.stringify(tmRts());renderArena();}
+  if(g&&!g.done&&P&&P.kind==='arena'&&AR.tab==='chal'&&!document.activeElement.matches('input,textarea')&&JSON.stringify(tmSubs())!==g.lastRts){g.lastRts=JSON.stringify(tmSubs());renderArena();}
 }
 function tmCard(){var m=chMy(),h='<div class="card" style="margin-top:10px"><p class="eyebrow" style="margin:0 0 6px">🤝 '+L('Hợp tác','Team case')+'</p>';
-  h+='<p class="small muted" style="margin:0 0 6px">'+L('Lập đội 2–3 người. Mỗi người một vai với dữ liệu riêng: tự giải phần của mình (40%), rồi cả đội thống nhất quyết định do trưởng nhóm nhập (60%). Đạt từ 60%: lãi của cả đội +15% trong 2 vòng; +'+BAL.tmPassXP+' XP.',
-    'Form a team of 2–3. Each member holds a role with private data: solve your own part (40%), then agree the team decision, entered by the leader (60%). 60% or more: every member\'s profit +15% for 2 rounds; +'+BAL.tmPassXP+' XP.')+'</p>';
+  h+='<p class="small muted" style="margin:0 0 6px">'+L('Lập đội 2–3 người. Mỗi người một vai với dữ liệu riêng: tự giải phần của mình (40%), rồi cả đội thống nhất quyết định do trưởng nhóm nhập (60%). Mỗi người nộp một lần; chỉ hiện tổng điểm đội. Đạt từ 60%: lãi của cả đội +15% trong 2 vòng; +'+BAL.tmPassXP+' XP.',
+    'Form a team of 2–3. Each member holds a role with private data: solve your own part (40%), then agree the team decision, entered by the leader (60%). Each member hands in once; only the team total is shown. 60% or more: every member\'s profit +15% for 2 rounds; +'+BAL.tmPassXP+' XP.')+'</p>';
   if(m.tinv){var rp=tmReplies(),acc=m.tinv.to.filter(function(id){return rp[id]==='yes';}).length;
     h+=m.tinv.to.map(function(id){return '<div class="rowline"><span>'+esc(chName(id))+'</span><b>'+(rp[id]==='yes'?'✓ '+L('Đồng ý','Joined'):rp[id]==='no'?'✗ '+L('Từ chối','Declined'):'⏳ '+L('Đang chờ','Waiting'))+'</b></div>';}).join('')+
       '<div class="acts" style="margin-top:8px"><button class="btn ghost" data-act="tmcancel">'+L('Huỷ','Cancel')+'</button><button class="btn" data-act="tmstart"'+(acc?'':' disabled')+'>'+L('Bắt đầu với ','Start with ')+(acc+1)+L(' người',' players')+'</button></div>';}
@@ -2168,7 +2138,7 @@ function renderTeam(){var g=AR.tm,h='',me=cloud.uid,fa=document.activeElement,fi
   h+='<div class="scene"><b>🤝 '+L('Đội của ','Team of ')+esc(g.lead===me?L('bạn','yours'):chName(g.lead))+'</b> · '+g.members.map(function(id){return esc(id===me?L('Bạn','You'):chName(id))+' ('+tmRoleOf(id).join('+')+')';}).join(' · ')+'</div>';
   if(g.err)h+='<div class="fb bad">'+g.err+'</div>';
   if(!g.pub){el('play-body').innerHTML=h+'<p class="loading muted">'+L('Đang lấy tình huống…','Fetching the case…')+'</p>';el('play-bar').innerHTML='<button class="btn ghost" data-act="tmquit">'+L('Về bản đồ','Back to the map')+'</button>';return;}
-  var p=g.pub,rt=tmRts();
+  var p=g.pub,subs=tmSubs();
   if(g.done){var ok=g.done.pct>=MK.TEAM_PASS;h+='<div class="card center"><h1>'+(ok?L('Đội đạt!','Team success!'):L('Chưa đạt','Not this time'))+'</h1><div class="kpis"><div class="kpi"><span>'+L('Điểm đội','Team score')+'</span><b>'+g.done.pct+'%</b></div><div class="kpi"><span>'+L('Phần riêng','Own parts')+'</span><b>'+g.done.own+'%</b></div><div class="kpi"><span>'+L('Quyết định chung','Team decision')+'</span><b>'+g.done.team+'%</b></div></div>'+
       '<p class="small" style="margin-top:8px">'+(ok?L('Cả đội: lãi +15% trong 2 vòng tới, +'+BAL.tmPassXP+' XP mỗi người.','The whole team: +15% profit for the next 2 rounds, +'+BAL.tmPassXP+' XP each.'):L('+'+BAL.tmPlayXP+' XP mỗi người vì đã hợp tác. Cần từ 60% để có thưởng lãi.','+'+BAL.tmPlayXP+' XP each for teaming up. 60% earns the profit bonus.'))+'</p></div>';
     el('play-body').innerHTML=h;el('play-bar').innerHTML='<button class="btn" data-act="tmquit">'+L('Về bản đồ','Back to the map')+'</button>';return;}
@@ -2176,27 +2146,32 @@ function renderTeam(){var g=AR.tm,h='',me=cloud.uid,fa=document.activeElement,fi
   if(p.table)h+='<div class="tbl-wrap"><table class="ctable"><tr>'+p.table.head.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr>'+p.table.rows.map(function(r){return '<tr>'+r.map(function(x){return '<td>'+esc(x)+'</td>';}).join('')+'</tr>';}).join('')+'</table></div>';
   p.roles.forEach(function(r){var mine=(g.roles[r.id]||[]).indexOf(me)>=0,who=(g.roles[r.id]||[])[0];
     h+='<div class="rolecard'+(mine?' mine':'')+'"><b>'+r.icon+' '+L('Vai ','Role ')+r.id+': '+esc(r.name)+'</b>'+(mine?'<div>'+esc(r.card)+'</div>':'<div class="muted small">🔒 '+esc(who===me?L('Bạn','You'):chName(who))+L(' giữ dữ liệu này. Hỏi bạn ấy!',' holds this data. Ask them!')+'</div>')+'</div>';});
-  p.parts.forEach(function(q,i){var mine=tmMine(i),r=rt[i],who=q.role==='team'?g.lead:(g.roles[q.role]||[])[0],busy=g.busy||!g.play;
+  p.parts.forEach(function(q,i){var mine=tmMine(i),who=q.role==='team'?g.lead:(g.roles[q.role]||[])[0],busy=g.busy||!g.play;
     h+='<div class="cpart"><div class="small"><span class="who-tag'+(q.role==='team'?' tm':'')+'">'+(q.role==='team'?L('Cả đội · trưởng nhóm nhập','Team · leader enters'):L('Vai ','Role ')+q.role)+'</span> <b>'+(i+1)+'.</b> '+esc(q.q)+(q.unit?' <span class="muted">('+esc(q.unit)+')</span>':'')+'</div>';
-    if(r!==undefined)h+='<div class="cres '+(r?'ok':'no')+'">'+(r?'✓ '+L('Đúng','Right'):'✗ '+L('Sai','Wrong'))+'</div>';
+    if(subs[who])h+='<div class="muted small">✓ '+esc(who===me?L('Bạn','You'):chName(who))+L(' đã nộp',' handed in')+'</div>';
     else if(!mine)h+='<div class="muted small">⏳ '+esc(who===me?L('Bạn','You'):chName(who))+L(' đang làm…',' is working on it…')+'</div>';
-    else if(q.type==='num')h+='<div class="cin-row"><input class="cin" data-i="'+i+'" id="ti'+i+'" inputmode="decimal" autocomplete="off" aria-label="'+L('Đáp số phần ','Answer part ')+(i+1)+'" value="'+esc(g.draft[i]||'')+'"'+(busy?' disabled':'')+'><button class="btn mini" data-act="tmnum" data-i="'+i+'"'+(busy?' disabled':'')+'>'+L('Trả lời','Answer')+'</button></div>';
-    else h+='<div>'+q.opts.map(function(o,k){return '<button class="opt" data-act="tmopt" data-i="'+i+'" data-k="'+k+'"'+(busy?' disabled':'')+'>'+esc(o)+'</button>';}).join('')+'</div>';
+    else if(q.type==='num')h+='<div class="cin-row"><input class="cin" data-i="'+i+'" id="ti'+i+'" inputmode="decimal" autocomplete="off" aria-label="'+L('Đáp số phần ','Answer part ')+(i+1)+'" value="'+esc(g.draft[i]||'')+'"'+(busy?' disabled':'')+'></div>';
+    else h+='<div>'+q.opts.map(function(o,k){return '<button class="opt'+(g.ans[i]===k?' sel':'')+'" data-act="tmopt" data-i="'+i+'" data-k="'+k+'"'+(busy?' disabled':'')+'>'+esc(o)+'</button>';}).join('')+'</div>';
     h+='</div>';});
   var notes=g.members.filter(function(id){return id!==me;}).map(function(id){var d=chDoc(id);return d&&d.note&&d.note.id===g.id&&d.note.txt?'<div class="note"><b>'+esc(chName(id))+':</b> '+esc(d.note.txt)+'</div>':'';}).join('');
   h+='<div class="cpart"><p class="eyebrow" style="margin:0 0 4px">'+L('Ghi chú của đội','Team notes')+'</p>'+(notes||'<p class="muted small">'+L('Chưa có ghi chú. Chia sẻ con số của vai bạn để cả đội cùng tính.','No notes yet. Share your role\'s numbers so the team can work it out.')+'</p>')+
     '<div class="cin-row"><input class="cin" id="tmnote" maxlength="200" autocomplete="off" aria-label="'+L('Ghi chú cho đội','Note to the team')+'" placeholder="'+L('VD: MC = 12 khi Q = 40','e.g. MC = 12 at Q = 40')+'" value="'+esc(g.draftNote!==undefined?g.draftNote:(g.myNote||''))+'"><button class="btn mini" data-act="tmnote">'+L('Gửi','Send')+'</button></div></div>';
   el('play-body').innerHTML=h+'</div>';
-  el('play-bar').innerHTML=g.lead===me?'<button class="btn ghost" data-act="tmsubmit">'+L('Nộp bài cho cả đội','Submit for the team')+'</button>':'<span class="muted small" style="align-self:center">'+L('Trưởng nhóm nộp bài khi cả đội xong.','The leader submits when the team is done.')+'</span>';
+  var tleft=p.parts.filter(function(_,i){return tmMine(i);}).length-Object.keys(caseFilled(g,tmMine)).length;
+  el('play-bar').innerHTML=!g.sub?'<button class="btn" data-act="tmsubmit"'+(g.busy||!g.play?' disabled':'')+'>'+(g.busy?L('Đang chấm…','Marking…'):g.confirm&&tleft?L('Nộp dù còn '+tleft+' phần trống?','Submit with '+tleft+' blank?'):g.lead===me?L('Nộp phần của tôi + quyết định đội','Submit my parts + team decision'):L('Nộp phần của tôi','Submit my parts'))+'</button>'
+    :g.lead===me?'<span class="muted small" style="align-self:center">'+L('Đã nộp. Chờ cả đội…','Handed in. Waiting for the team…')+'</span><button class="btn ghost" data-act="tmend">'+L('Kết thúc cho cả đội','End for the team')+'</button>'
+    :'<span class="muted small" style="align-self:center">'+L('Đã nộp phần của bạn. Kết quả hiện khi cả đội xong.','Your parts are in. The result shows when the team is done.')+'</span>';
   if(fid&&el(fid)&&!el(fid).disabled){var f=el(fid);f.focus();try{f.setSelectionRange(f.value.length,f.value.length);}catch(e){}}
 }
 
 /* ---------- teacher debrief after an event: the most-missed case parts + the worked solution (teacher only) ---------- */
-function dbItems(){var agg={};Object.keys(AR.chd||{}).forEach(function(id){var d=chDoc(id);if(!d)return;
-    (d.res||[]).forEach(function(r){if(!r.cid||!r.pr)return;Object.keys(r.pr).forEach(function(i){var k=r.cid+'#'+i,a=agg[k]=agg[k]||{cid:r.cid,i:+i,n:0,miss:0,sh:null};a.n++;if(!r.pr[i]){a.miss++;if(!a.sh)a.sh=r.sh;}if(!a.sh0)a.sh0=r.sh;});});
-    var t=d.team;if(t&&t.done&&t.done.rt&&t.cid)Object.keys(t.done.rt).forEach(function(i){var k=t.cid+'#'+i,a=agg[k]=agg[k]||{cid:t.cid,i:+i,n:0,miss:0,sh:null};a.n++;if(!t.done.rt[i]){a.miss++;if(!a.sh)a.sh=t.share;}if(!a.sh0)a.sh0=t.share;});});
+function dbLocal(){var rows=[];Object.keys(AR.chd||{}).forEach(function(id){var d=chDoc(id);if(!d)return;   // claude.ai build only (no server): per-part results ride in the case docs, never shown to students
+    (d.res||[]).forEach(function(r){if(r.cid&&r.pr)rows.push({cid:r.cid,pr:r.pr,sh:r.sh});});if(d.tres&&d.tres.pr&&d.tres.cid)rows.push({cid:d.tres.cid,pr:d.tres.pr,sh:d.tres.sh});});return rows;}
+function dbLoad(){var c=AR.cls.cfg;if(Bank&&Bank.local){AR.dbr=dbLocal();return;}if(AR.dbr||AR.dbBusy||!Bank||!Bank.caseDebrief)return;AR.dbBusy=true;
+  Bank.caseDebrief((c&&c.start)||0).then(function(res){AR.dbBusy=false;AR.dbr=res.ok?res.rows||[]:[];if(P&&P.kind==='arena')renderArena();},function(){AR.dbBusy=false;});}
+function dbItems(){var agg={};(AR.dbr||[]).forEach(function(r){if(!r.cid||!r.pr)return;Object.keys(r.pr).forEach(function(i){var k=r.cid+'#'+i,a=agg[k]=agg[k]||{cid:r.cid,i:+i,n:0,miss:0,sh:null};a.n++;if(!r.pr[i]){a.miss++;if(!a.sh)a.sh=r.sh;}if(!a.sh0)a.sh0=r.sh;});});
   return Object.keys(agg).map(function(k){return agg[k];}).filter(function(a){return a.miss>0;}).sort(function(a,b){return b.miss-a.miss||b.n-a.n;}).slice(0,5);}
-function dbHtml(){if(!teacherAllowed()||!AR.chd)return '';var it=dbItems();AR.dbl=it;AR.dbs=AR.dbs||{};
+function dbHtml(){if(!teacherAllowed()||!AR.chd)return '';if(Bank&&Bank.local)AR.dbr=dbLocal();if(!AR.dbr){dbLoad();return '<div class="card" style="margin-top:10px"><p class="eyebrow" style="margin:0 0 6px">📋 '+L('Tổng kết sau thi đấu','Debrief after the event')+'</p><p class="loading muted small">'+L('Đang tải…','Loading…')+'</p></div>';}var it=dbItems();AR.dbl=it;AR.dbs=AR.dbs||{};
   var h='<div class="card" style="margin-top:10px"><p class="eyebrow" style="margin:0 0 6px">📋 '+L('Tổng kết sau thi đấu (chỉ giáo viên thấy)','Debrief after the event (teacher only)')+'</p>';
   if(!it.length)return h+'<p class="muted small">'+L('Chưa có phần nào bị sai trong Đấu trí / Hợp tác.','No brain-duel or team-case part was missed.')+'</p></div>';
   h+='<p class="small muted" style="margin:0 0 6px">'+L('5 phần sai nhiều nhất. Mở lời giải để chữa nhanh trên lớp (học viên không thấy).','The 5 most-missed parts. Open a solution to go over it in class (students never see it).')+'</p>';
@@ -2239,7 +2214,7 @@ var CLOS=[
   {k:'4',n:V('Đồ thị kinh tế vi mô','Microeconomic graphs')}];
 function cloAdd(t){if(!t||!t.length)return;S.clo=S.clo||{};
   t.forEach(function(x){var k=String(x[0]);if(!/^[a-z]{2}[1-5]$/.test(k))return;var c=S.clo[k]||[0,0];c[0]+=Number(x[1])||0;c[1]+=Number(x[2])||0;S.clo[k]=c;});persist();}
-if(Bank)['check','bossCheck','npcCheck','caseCheck'].forEach(function(f){var g=Bank[f];if(g)Bank[f]=function(){return g.apply(Bank,arguments).then(function(res){if(res&&res.ok&&res.t)cloAdd(res.t);return res;});};});
+if(Bank)['submit','npcCheck','caseSubmit'].forEach(function(f){var g=Bank[f];if(g)Bank[f]=function(){return g.apply(Bank,arguments).then(function(res){if(res&&res.ok&&res.t)cloAdd(res.t);return res;});};});
 function cloRow(clo){var o={};CLOS.forEach(function(c){o[c.k]=(clo||{})[COURSE+c.k]||[0,0];});return o;}
 function cloState(c){return c[0]<CLO_MIN?'na':100*c[1]/c[0]>=CLO_PASS?'ok':'no';}
 function cloPct(c){return c[0]?Math.round(100*c[1]/c[0]):0;}
@@ -2311,28 +2286,23 @@ document.addEventListener('click',function(e){
    case 'arleave':arLeave(a.dataset.d);break;
    case 'arstep':var sd=a.dataset.d,st0=MK.TYPES[MK.BY[sd].type],rg=el('arr'),nv=Math.max(st0.min,Math.min(st0.max,(+rg.value)+(+a.dataset.v)));rg.value=nv;arSlide(sd,nv);break;
    case 'arduel':arStartDuel(a.dataset.d,a.dataset.t);break;
-   case 'duelans':arDuelAnswer(+a.dataset.i);break;
-   case 'duelnext':arDuelNext();break;
+   case 'duelans':if(AR.duel&&!AR.duel.busy&&!AR.duel.done){AR.duel.ans[AR.duel.i]=+a.dataset.i;AR.duel.confirm=false;renderArena();}break;
+   case 'dugo':arDuelGo(+a.dataset.i);break;case 'duprev':arDuelGo(AR.duel?AR.duel.i-1:-1);break;case 'dunext':arDuelGo(AR.duel?AR.duel.i+1:-1);break;case 'dusub':arDuelSubmit(false);break;
    case 'duelgiveup':arDuelFinish();break;
    case 'duelquit':AR.duel=null;clearInterval(AR.dt);renderArena();break;
    case 'evopen':if(teacherAllowed()){var md=el('ev-mode').value;arOpenEvent({min:+el('ev-min').value,sec:+el('ev-sec').value,mode:md==='solo'?'solo':'team',teams:md==='solo'?0:+md.slice(4),bots:+el('ev-bots').value,openAll:el('ev-all').checked});}break;
    case 'evmore':if(arHosting())arSetEnd(AR.cls.cfg.end+300000);break;
    case 'evstop':if(arHosting()){if(AR.confirmStop){AR.confirmStop=false;arSetEnd(Date.now());arHostTick();}else{AR.confirmStop=true;renderArena();}}break;
    case 'replay':var nd=P.node;stopTimer();P=null;if(nd.kind==='stage')startStage(nd);else if(nd.kind==='boss')bossIntro(nd);else startMission(nd);break;
-   case 'mc':if(!P.busy&&P.t.tried.indexOf(+a.dataset.i)<0){P.t.sel=+a.dataset.i;renderStage();}break;
-   case 'tf':P.t.ans[+a.dataset.i]=a.dataset.v==='true';renderStage();break;
-   case 'ml':P.t.pickL=P.t.pickL===+a.dataset.i?null:+a.dataset.i;renderStage();break;
-   case 'mr':if(P.t.pickL!==null){var j=+a.dataset.j;Object.keys(P.t.link).forEach(function(k){if(P.t.link[k]===j)delete P.t.link[k];});P.t.link[P.t.pickL]=j;P.t.pickL=null;renderStage();}break;
+   case 'mc':if(!P.busy){P.ans[P.i]=+a.dataset.i;P.confirm=false;renderStage();}break;
+   case 'tf':if(!P.busy){P.ans[P.i][+a.dataset.i]=a.dataset.v==='true';P.confirm=false;renderStage();}break;
+   case 'stgo':stageGo(+a.dataset.i);break;case 'stprev':stageGo(P.i-1);break;case 'stnext':stageGo(P.i+1);break;case 'stsub':stageSubmit();break;
    case 'hint':useHint();break;
-   case 'check':check();break;
-   case 'retry':retry();break;
    case 'npcagain':npcAgain();break;
    case 'npcgiveup':npcGiveUp();break;
-   case 'skipq':skipQ();break;
-   case 'next':nextTask();break;
    case 'bossgo':startBoss(P.node,!!a.dataset.t);break;
-   case 'bossans':bossAnswer(+a.dataset.i);break;
-   case 'bossnext':bossNext();break;
+   case 'bossans':if(!P.busy&&!P.res){P.ans[P.i]=+a.dataset.i;P.confirm=false;renderBoss();}break;
+   case 'bsgo':bossGo(+a.dataset.i);break;case 'bsprev':bossGo(P.i-1);break;case 'bsnext':bossGo(P.i+1);break;case 'bssub':bossSubmit(false);break;
    case 'dx':P.x=Math.max(P.m.min,Math.min(P.m.max,P.x+(+a.dataset.d)));renderDecide();break;
    case 'dtry':dTry();break;
    case 'dfinish':dFinish();break;
@@ -2345,19 +2315,18 @@ document.addEventListener('click',function(e){
    case 'tmstart':tmStart();break;
    case 'tmyes':tmAnswer(true);break;
    case 'tmno':tmAnswer(false);break;
-   case 'tmnum':var ti=el('ti'+a.dataset.i);tmPart(+a.dataset.i,ti?ti.value:'');break;
-   case 'tmopt':tmPart(+a.dataset.i,+a.dataset.k);break;
+   case 'tmopt':if(AR.tm&&!AR.tm.sub&&tmMine(+a.dataset.i)){[].slice.call(document.querySelectorAll('#play-body input.cin')).forEach(function(inp){AR.tm.draft[inp.dataset.i]=inp.value;});AR.tm.ans[+a.dataset.i]=+a.dataset.k;AR.tm.confirm=false;renderArena();}break;
    case 'tmnote':tmNote();break;
-   case 'tmsubmit':tmCheckEnd(true);break;
+   case 'tmsubmit':tmSubmit(false);break;
+   case 'tmend':tmCheckEnd(true);break;
    case 'tmquit':if(AR.tm&&!AR.tm.done&&AR.tm.lead===cloud.uid&&AR.tm.pub)tmCheckEnd(true);else{var m1=chMy();m1.play=null;chSend();AR.tm=null;renderArena();}break;
    case 'dbsol':dbSol(+a.dataset.k);break;
    case 'chcancel':chCancel();break;
    case 'chyes':chAnswer(true);break;
    case 'chno':chAnswer(false);break;
    case 'chopen':openArena();AR.tab='chal';renderArena();break;
-   case 'cgnum':var ci=el('ci'+a.dataset.i);chPart(+a.dataset.i,ci?ci.value:'');break;
-   case 'cgopt':chPart(+a.dataset.i,+a.dataset.k);break;
-   case 'cgsubmit':chFinish();break;
+   case 'cgopt':if(AR.cg&&!AR.cg.done&&!AR.cg.busy){[].slice.call(document.querySelectorAll('#play-body input.cin')).forEach(function(inp){AR.cg.draft[inp.dataset.i]=inp.value;});AR.cg.ans[+a.dataset.i]=+a.dataset.k;AR.cg.confirm=false;renderArena();}break;
+   case 'cgsubmit':chSubmit(false);break;
    case 'cgquit':if(AR.cg&&!AR.cg.done&&AR.cg.pub)chFinish();else{if(AR.cg&&!AR.cg.done){var m0=chMy();m0.play=null;chSend();}AR.cg=null;renderArena();}break;
    case 'trials':renderTrials();openSheet('trials');break;
    case 'ach':renderAch();openSheet('ach');break;
@@ -2365,8 +2334,8 @@ document.addEventListener('click',function(e){
    case 'dtab':if(P&&P.kind==='dash'){P.dtab=a.dataset.t;if(P.dtab==='clo')cloSrvLoad();renderDash();}break;
    case 'clocsv':if(teacherAllowed())exportClo();break;
    case 'trialgo':startTrial(+a.dataset.c);break;
-   case 'trialans':trialAnswer(+a.dataset.i);break;
-   case 'trialnext':trialNext();break;
+   case 'trialans':if(P&&P.kind==='trial'&&!P.busy&&!P.res){P.ans[P.i]=+a.dataset.i;P.confirm=false;renderTrial();}break;
+   case 'trgo':trialGo(+a.dataset.i);break;case 'trprev':trialGo(P.i-1);break;case 'trnext':trialGo(P.i+1);break;case 'trsub':trialSubmit(false);break;
    case 'mggo':mgGo();break;
    case 'mzmove':mazeMove(a.dataset.d);break;
    case 'mgstop':mgStop();break;
@@ -2382,7 +2351,7 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Enter'&&e.target&&e.target.classList&&e.target.classList.contains('cin')){var bt=e.target.parentNode.querySelector('button');if(bt&&!bt.disabled)bt.click();return;}
   if(e.key==='Escape'){if(sheetMode)closeSheet();}
   if(P&&P.kind==='mini'&&P.mz&&P.phase==='play'){var dk={ArrowUp:'n',ArrowDown:'s',ArrowLeft:'w',ArrowRight:'e'}[e.key];if(dk){e.preventDefault();mazeMove(dk);return;}}
-  if((e.key==='Enter'||e.key===' ')&&e.target.closest&&e.target.closest('[data-npc],[data-node],[data-hex],[data-mg]')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
+  if((e.key==='Enter'||e.key===' ')&&e.target.closest&&e.target.closest('[data-npc],[data-node],[data-hex],[data-mg],.qsdots i')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
 });
 el('ov').addEventListener('click',function(e){if(e.target===el('ov'))closeSheet();});
 window.addEventListener('pageshow',function(){syncCafe();if(!P)renderMap();});
