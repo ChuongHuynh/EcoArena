@@ -9,7 +9,7 @@
 <script>window.ARENA_RELEASE=true;</script>
 <style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head><body>
-<title>Economics Arena 4.8</title>
+<title>Economics Arena 4.9</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -265,7 +265,7 @@ body.cursed .map::after{content:"";position:absolute;inset:0;pointer-events:none
 .abar{height:6px;border-radius:3px;background:var(--line);overflow:hidden} .abar i{display:block;height:100%;background:var(--tc)} .ach:not(.on) .abar i{background:var(--teal)}
 @media (max-width:360px){.achgrid{grid-template-columns:1fr}}
 
-/* ===== Version 4.8: teacher gates + the Final gate (Thăng Tiên Trì · Hoả Chí) ===== */
+/* ===== Version 4.8: teacher gates + the Final gate (Vượt Vũ Môn · Hoá Rồng) ===== */
 .dtabs{flex-wrap:wrap} .dtabs .btn{flex:1 1 auto;min-width:0;padding:8px 10px;font-size:14px}
 .ggrid{display:grid;grid-template-columns:40px repeat(6,minmax(0,1fr));gap:4px;align-items:center;margin:8px 0}
 .ggrid .gh{font-size:11px;font-weight:700;color:var(--muted);text-align:center}
@@ -539,7 +539,7 @@ function needsReset(){var c=cloud.cfg||{},mine=(c.resets||{})[cloud.uid]||0;retu
 function applyConfig(){if(!needsReset())return;if(P){cloud.pendingReset=true;return;}doReset();}
 function doReset(){var c=cloud.cfg||{};S=fresh();S.epoch=c.epoch||0;S.resetSeen=(c.resets||{})[cloud.uid]||0;S.updated=Date.now();localSave();cloud.pendingReset=false;
   if(cloud.mode==='on')cloudPush();renderMap();follow(0);toast(L('Giáo viên đã đặt lại tiến độ. Bắt đầu lại từ xe đẩy cà phê!','Your teacher reset the progress. Back to the coffee cart!'));}
-function writeConfig(patch){if(SHEETS)return api('setConfig',{patch:patch}).then(function(res){if(res.ok)cloud.cfg=res.cfg;});var cfg=Object.assign({},cloud.cfg||{},patch);cloud.cfg=cfg;return cloud.db.doc('class/config').set(cfg);}
+function writeConfig(patch){if(SHEETS)return api('setConfig',{patch:patch}).then(function(res){if(res.ok)cloud.cfg=res.cfg;});var cfg=Object.assign({},cloud.cfg||{},patch);cloud.cfg=cfg;return cloud.db?cloud.db.doc('class/config').set(cfg):Promise.resolve();}   // 4.8: a local copy without the runtime keeps gates on this page only
 function deleteSeq(ids){return ids.reduce(function(pr,id){return pr.then(function(){return cloud.db.doc('players/'+id).delete();}).then(function(){return cloud.db.doc('board/'+id).delete();});},Promise.resolve());}
 function resetPlayer(uid){if(FAST)fastCall('cloReset',{id:uid}).then(function(){cloud.cloSrv=null;},function(){});if(SHEETS)return api('reset',{id:uid}).then(function(res){if(res.ok){cloud.cfg=res.cfg;toast(L('Đã đặt lại người chơi.','Player reset.'));}return sheetsDash();});var c=cloud.cfg||{},r=Object.assign({},c.resets||{});r[uid]=Date.now();
   return writeConfig({resets:r}).then(function(){return deleteSeq([uid]);}).then(function(){toast(L('Đã đặt lại người chơi.','Player reset.'));},function(){toast(L('Không đặt lại được. Thử lại sau.','Could not reset. Try again later.'));});}
@@ -739,10 +739,10 @@ var Bank=(function(){
       caseSol:function(share,cid){if(!window.CaseCore)return done({error:'no_cases'});var s=CaseCore.make(cid,share);return done({cid:cid,title:s.pub.title,story:s.pub.story,parts:s.pub.parts.map(function(q){return q.q;}),sol:CaseCore.solution(cid,share)});},
       npcHint:function(play){return done(keys[play]?BankCore.hint(keys[play],1):{error:'expired'});},
       npcCheck:function(play,ans,ex){return done(keys[play]?BankCore.single(keys[play],ans,ex):{error:'expired'});},
-      // 4.8 claude.ai test copy: the Final bank is finalbank.js; one attempt per opening is kept in this player's progress
+      // 4.8 claude.ai test copy: the Final bank is finalbank.js; retakes are unlimited while the gate is open; best / latest / tries are kept in this player's progress
       finStart:function(t){var F=window.ARENA_FINAL||{mc:[],ex:[]},it=t==='F1'?F.mc:F.ex,rd=finRound(t);if(!it||!it.length)return done({error:'no_final'});
-        if(!teacherAllowed()){if(!rd)return done({error:'locked'});var me=finMine(t);if(me&&me.rd===rd)return done({error:'done',right:me.right,n:me.n,score:me.score});}
-        var s=t==='F1'?BankCore.final1(it):BankCore.final2(it),now=Date.now();return done({pub:s.pub,play:put(s.key),t0:now,sec:BankCore.FIN[t].sec,now:now,rd:rd});},
+        if(!teacherAllowed()&&!rd)return done({error:'locked'});
+        var s=t==='F1'?BankCore.final1(it):BankCore.final2(it),now=Date.now();return done({pub:s.pub,play:put(s.key),t0:now,sec:BankCore.FIN[t].sec,now:now,rd:rd,a:finTries(t)+1});},
       finSubmit:function(t,play,ans){if(!keys[play])return done({error:'expired'});var r=BankCore.submit(keys[play],ans,'check');if(!r.error)r.score=BankCore.score10(r.right,r.n);return done(r);},
       info:function(){return {n:items.length,news:items.filter(function(q){return q.src==='v1_new';}).length};},
       text:function(id){return byId[id]||null;}};
@@ -767,7 +767,7 @@ var Bank=(function(){
       caseDebrief:function(since){return fastCall('caseDebrief',{since:since});},
       npcHint:function(play){return use(play,0,'npcHint',{});},
       npcCheck:function(play,ans,ex){return use(play,0,'npcCheck',{answer:ans,extra:!!ex});},
-      // 4.8: the Final gate on the Worker (D1 keeps one attempt per opening); a Worker without D1 or before 4.8 → the Sheet does it
+      // 4.8: the Final gate on the Worker (D1 table fin2 keeps every attempt; unlimited retakes while open); a Worker without D1 or before 4.8 → the Sheet does it
       finStart:function(t){return fastCall('finStart',{test:t}).then(function(res){
         if(res.error==='no_db'||res.error==='bad_request')return api('finStart',{test:t}).then(function(r2){r2.via='sheet';return r2;});
         if(res.ok){res.via='fast';if(res.keys){res.play=fput(res.keys);delete res.keys;}}return res;});},
@@ -1074,7 +1074,7 @@ function hud(){
   document.documentElement.lang=lang;
   document.querySelectorAll('[data-lang]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});
   var w=WORLDS[worldNow()],r=rankIndex();
-  el('crumb').textContent=L('Vi mô · Phiên bản 4.8','Micro · Version 4.8')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
+  el('crumb').textContent=L('Vi mô · Phiên bản 4.9','Micro · Version 4.9')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
   el('rank').textContent=(r<0?L('Khởi nghiệp','Starting out'):tx(WORLDS[r].rank))+(topTitle()?' · ⚡'+titleName(topTitle()):'');
   document.body.classList.toggle('cursed',!!S.curse);achCheck();
   el('xp').textContent=S.xp+' XP';el('cap').textContent=L('Vốn ','Capital ')+fmt(S.cap)+'k';
@@ -2322,11 +2322,11 @@ if(ARTEST)ARTEST.peek=function(){return P;};ARTEST&&(ARTEST.ar=function(){return
 
 /* ================= 4.8: TEACHER GATES + THE FINAL GATE =================
    cfg.gates = {stop: 'o' open to everyone (no need to pass the stops before) | 'c' closed to every student}; no entry = by progress.
-   cfg.fin = {F1: {on, n}, F2: {on, n}}: each opening (n) gives every student ONE attempt. Students see only the total right. */
-var FINT={F1:{name:V('Final Test 1 – Thăng Tiên Trì','Final Test 1 – Thăng Tiên Trì'),short:'Thăng Tiên Trì',
-    d:V('20 câu trắc nghiệm (C1: 2 câu, C2–C7: 3 câu mỗi chương) · 30 phút · nộp một lần.','20 multiple-choice questions (C1: 2, C2–C7: 3 each) · 30 minutes · hand in once.')},
-  F2:{name:V('Final Test 2 – Hoả Chí','Final Test 2 – Hoả Chí'),short:'Hoả Chí',
-    d:V('1 bài tập tính toán, điền 4 kết quả bằng số · 30 phút · nộp một lần.','1 calculation exercise, type 4 numeric results · 30 minutes · hand in once.')}};
+   cfg.fin = {F1: {on, n}, F2: {on, n}}: each opening (n) lets every student retake as often as they like while the test is ON (4.9); the best score of the opening counts. Students see only the total right. */
+var FINT={F1:{name:V('Final Test 1 – Vượt Vũ Môn','Final Test 1 – Vượt Vũ Môn'),short:'Vượt Vũ Môn',
+    d:V('20 câu trắc nghiệm (C1: 2 câu, C2–C7: 3 câu mỗi chương) · 30 phút · mỗi bài nộp một lần, làm lại bao nhiêu lần cũng được khi cổng mở.','20 multiple-choice questions (C1: 2, C2–C7: 3 each) · 30 minutes · each paper is handed in once; retake as often as you like while the gate is open.')},
+  F2:{name:V('Final Test 2 – Hoá Rồng','Final Test 2 – Hoá Rồng'),short:'Hoá Rồng',
+    d:V('1 bài tập tính toán, điền 4 kết quả bằng số · 30 phút · mỗi bài nộp một lần, làm lại bao nhiêu lần cũng được khi cổng mở.','1 calculation exercise, type 4 numeric results · 30 minutes · each paper is handed in once; retake as often as you like while the gate is open.')}};
 var FIN_XP=5,FINLIVE={};
 function sc10(r,n){return n?Math.round(100*r/n)/10:0;}   // the website has no BankCore: the page keeps its own helpers
 function gatesCfg(){return (cloud.cfg&&cloud.cfg.gates)||{};}
@@ -2335,8 +2335,8 @@ function teacherMode(){return S.teacher&&teacherAllowed();}
 function nodeClosed(nd){return !teacherMode()&&!teacherAllowed()&&gateOf(nd.id)==='c';}
 function finRound(t){var f=((cloud.cfg&&cloud.cfg.fin)||{})[t];return f&&f.on?Number(f.n)||0:0;}
 function finLast(t){var f=((cloud.cfg&&cloud.cfg.fin)||{})[t];return f?Number(f.n)||0:0;}
-function finMine(t){var x=(S.fin||{})[t];if(!x||!x.done)return null;var rt=((cloud.cfg&&cloud.cfg.finRetake)||{})[cloud.uid+'|'+t]||0;return rt>(x.t||0)?null:x;}
-function finDone(t){var x=finMine(t),rd=finRound(t);return !!(x&&rd&&x.rd===rd);}
+function finMine(t){var x=(S.fin||{})[t];return x&&x.done?x:null;}   // 4.9: right/n/score = the BEST attempt of opening rd; k = tries, lr/ln/ls = the latest; bestAll = best right-count in any opening (XP)
+function finTries(t){var x=finMine(t),rd=finRound(t);return x&&rd&&x.rd===rd?(x.k||1):0;}
 function anyOpenFinal(){return !!(finRound('F1')||finRound('F2'));}
 function openGateList(){return NODES.map(function(nd,i){return {nd:nd,i:i};}).filter(function(x){return gateOf(x.nd.id)==='o'&&x.i!==S.pos;});}
 function playAt(nd){if(nodeClosed(nd)){toast(L('Giáo viên đang đóng mốc này.','Your teacher has closed this stop.'));return;}
@@ -2357,19 +2357,18 @@ function finalGateSvg(){var x=cx(FG_T),y=cy(FG_T),o1=!!finRound('F1')||teacherAl
   s+='<rect x="'+(x-34)+'" y="'+(y-42)+'" width="68" height="15" rx="3" fill="#e8c773"/><text x="'+x+'" y="'+(y-31)+'" text-anchor="middle" font-size="9.5" font-weight="800" fill="#5a1a12">'+L('CỔNG CUỐI KỲ','FINAL GATE')+'</text>';
   [[-62,'#1d6f66','F1'],[62,'#a83c14','F2']].forEach(function(d){var gx=x+d[0];s+='<g data-fin="'+d[2]+'"><rect x="'+(gx-36)+'" y="'+(y-18)+'" width="72" height="56" rx="8" fill="'+d[1]+'"/>'+
     '<path d="M'+(gx-22)+' '+(y+38)+' V'+(y-2)+' Q'+gx+' '+(y-16)+' '+(gx+22)+' '+(y-2)+' V'+(y+38)+'" fill="rgba(0,0,0,.28)"/>'+
-    (d[2]==='F1'?'<text x="'+gx+'" y="'+(y-8)+'" text-anchor="middle" font-size="8.5" font-weight="800" fill="#fff">THĂNG TIÊN</text><text x="'+gx+'" y="'+(y+1)+'" text-anchor="middle" font-size="8.5" font-weight="800" fill="#fff">TRÌ</text>':'<text x="'+gx+'" y="'+(y-4)+'" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">HOẢ CHÍ</text>')+(d[2]==='F1'?'<text x="'+gx+'" y="'+(y+20)+'" text-anchor="middle" font-size="13">🪷</text>':'<text x="'+gx+'" y="'+(y+14)+'" text-anchor="middle" font-size="13">🔥</text>')+lk(d[2]==='F1'?o1:o2,d[0])+'</g>';});
+    (d[2]==='F1'?'<text x="'+gx+'" y="'+(y-8)+'" text-anchor="middle" font-size="8.5" font-weight="800" fill="#fff">VƯỢT VŨ</text><text x="'+gx+'" y="'+(y+1)+'" text-anchor="middle" font-size="8.5" font-weight="800" fill="#fff">MÔN</text>':'<text x="'+gx+'" y="'+(y-4)+'" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">HOÁ RỒNG</text>')+(d[2]==='F1'?'<text x="'+gx+'" y="'+(y+20)+'" text-anchor="middle" font-size="13">🪷</text>':'<text x="'+gx+'" y="'+(y+14)+'" text-anchor="middle" font-size="13">🔥</text>')+lk(d[2]==='F1'?o1:o2,d[0])+'</g>';});
   s+='<rect x="'+(x-8)+'" y="'+(y-18)+'" width="16" height="56" fill="#a8322a"/>';
   return s+'</g>';}
 
 /* ---------- the Final gate sheet ---------- */
-function renderFinalSheet(){var h='<div class="who"><div class="face" aria-hidden="true">⛩️</div><div><b>'+L('Cổng Cuối Kỳ','The Final gate')+'</b><span class="muted small">'+L('Hai bài thi theo cấu trúc đề cuối kỳ BEE1037. Giáo viên mở cổng; mỗi lần mở, mỗi bạn làm một lần.','Two tests built like the BEE1037 final exam. Your teacher opens them; each opening allows one attempt.')+'</span></div></div>';
-  ['F1','F2'].forEach(function(t){var rd=finRound(t),me=finMine(t),done=finDone(t),tr=teacherAllowed(),st,btn;
+function renderFinalSheet(){var h='<div class="who"><div class="face" aria-hidden="true">⛩️</div><div><b>'+L('Cổng Cuối Kỳ','The Final gate')+'</b><span class="muted small">'+L('Hai bài thi theo cấu trúc đề cuối kỳ BEE1037. Giáo viên mở cổng; khi cổng mở, bạn làm lại bao nhiêu lần cũng được — điểm cao nhất được ghi nhận.','Two tests built like the BEE1037 final exam. Your teacher opens the gate; while it is open you may retake as often as you like — your best score counts.')+'</span></div></div>';
+  ['F1','F2'].forEach(function(t){var rd=finRound(t),me=finMine(t),k=finTries(t),tr=teacherAllowed(),live=FINLIVE[t]&&FINLIVE[t].rd===rd,st,btn,bt=me?L('Điểm cao nhất: ','Best: ')+fmtScore(me.score)+' ('+me.right+'/'+me.n+') · '+L('Lần làm: ','Tries: ')+(me.rd===rd?k:(me.k||1)):'';
     if(tr){st=rd?L('Đang mở · lượt ','Open · opening ')+rd:L('Đang đóng với học viên','Closed to students');btn='<button class="btn" data-act="finstart" data-t="'+t+'">'+L('Thử bài (không ghi điểm)','Try it (not recorded)')+'</button>';}
-    else if(done){st=L('Đã nộp · Đúng ','Handed in · ')+me.right+'/'+me.n+L(' · Điểm ',' right · score ')+fmtScore(me.score);btn='<button class="btn" disabled>'+L('Đã làm trong lượt này','Done for this opening')+'</button>';}
-    else if(rd){st=L('Đang mở','Open')+(FINLIVE[t]&&FINLIVE[t].rd===rd?' · '+L('bài đang làm dở','in progress'):'');btn='<button class="btn" data-act="finstart" data-t="'+t+'">'+(FINLIVE[t]&&FINLIVE[t].rd===rd?L('Làm tiếp','Continue'):L('Vào thi','Start'))+'</button>';}
-    else{st='🔒 '+L('Giáo viên chưa mở','Not open yet')+(me?' · '+L('lần trước: ','last time: ')+fmtScore(me.score):'');btn='<button class="btn" disabled>'+L('Chưa mở','Locked')+'</button>';}
+    else if(rd){st=L('Đang mở','Open')+(live?' · '+L('bài đang làm dở','in progress'):'')+(me&&me.rd===rd?' · '+bt:'');btn='<button class="btn" data-act="finstart" data-t="'+t+'">'+(live?L('Làm tiếp','Continue'):k?L('Làm lại','Retake'):L('Vào thi','Start'))+'</button>';}
+    else{st='🔒 '+L('Giáo viên chưa mở','Not open yet')+(me?' · '+bt:'');btn='<button class="btn" disabled>'+L('Chưa mở','Locked')+'</button>';}
     h+='<div class="fincard '+t.toLowerCase()+'"><h3>'+(t==='F1'?'🪷 ':'🔥 ')+esc(tx(FINT[t].name))+'</h3><p>'+esc(tx(FINT[t].d))+'</p><span class="fst">'+esc(st)+'</span>'+btn+'</div>';});
-  h+='<p class="small muted" style="margin-top:10px">'+L('Kết quả chỉ báo tổng số câu đúng và điểm (thang 10). Hoả Chí: nhập số, dấu phẩy hoặc chấm cho phần thập phân; sai lệch đến 1% vẫn tính đúng.','Results show only the total right and a score out of 10. Hoả Chí: type numbers, with a comma or a dot for decimals; within 1% counts as right.')+'</p>';
+  h+='<p class="small muted" style="margin-top:10px">'+L('Kết quả chỉ báo tổng số câu đúng và điểm (thang 10). Hoá Rồng: nhập số, dấu phẩy hoặc chấm cho phần thập phân; sai lệch đến 1% vẫn tính đúng. Mỗi lần làm là một đề mới với đồng hồ 30 phút riêng.','Results show only the total right and a score out of 10. Hoá Rồng: type numbers, with a comma or a dot for decimals; within 1% counts as right. Every attempt is a fresh paper with its own 30-minute clock.')+'</p>';
   el('sheet').innerHTML=h+'<div class="acts" style="margin-top:12px"><button class="btn" data-act="closesheet">'+L('Đóng','Close')+'</button></div>';}
 function openFinalSheet(){renderFinalSheet();openSheet('final');if(SHEETS)sheetsHello(function(){if(sheetMode==='final')renderFinalSheet();});}
 function fmtScore(x){return (Math.round((Number(x)||0)*10)/10).toLocaleString(lang==='vi'?'vi-VN':'en-US');}
@@ -2393,18 +2392,17 @@ function finFx(t){var p=el('play');p.classList.remove('fx-f1','fx-f2');var old=p
   d.setAttribute('aria-hidden','true');p.insertBefore(d,p.firstChild);}
 function startFinal(t){if(!FINT[t])return;closeSheet();
   var rd=finRound(t);if(!teacherAllowed()&&!rd){toast(L('Giáo viên chưa mở bài thi này.','Your teacher has not opened this test.'));return;}
-  if(!teacherAllowed()&&finDone(t)){toast(L('Bạn đã làm bài này trong lượt mở hiện tại.','You have done this test in the current opening.'));return;}
   P={kind:'final',t:t,node:{id:t,name:FINT[t].name},xp:0,i:0,ans:[],busy:false,confirm:false,err:''};finFx(t);openPlay();playLoading(tx(FINT[t].name));
   var me=P,live=FINLIVE[t];
-  if(live&&live.rd===rd&&live.end>Date.now()&&!teacherAllowed()){Object.assign(P,{pub:live.pub,play:live.play,rd:live.rd,end:live.end,sec:live.sec,ans:live.ans,via:live.via});finRun();return;}
+  if(live&&live.rd===rd&&live.end>Date.now()&&!teacherAllowed()){Object.assign(P,{pub:live.pub,play:live.play,rd:live.rd,end:live.end,sec:live.sec,ans:live.ans,via:live.via,a:live.a});finRun();return;}
   Bank.finStart(t).then(function(res){if(P!==me)return;
-    if(!res.ok){if(res.error==='done'){P.res={right:res.right||0,n:res.n||0,score:res.score||0,old:true};if(res.n)finRecord(res);renderFinalResult();return;}
+    if(!res.ok){
       if(res.error==='no_final'){el('play-body').innerHTML='<div class="fb bad">'+L('Giáo viên chưa nhập ngân hàng Final (trang FinalBank_MC / FinalBank_Ex).','Your teacher has not imported the Final bank yet (tabs FinalBank_MC / FinalBank_Ex).')+'</div>';return;}
       playFail(res);return;}
-    P.pub=res.pub;P.play=res.play;P.rd=res.rd||rd;P.via=res.via;
+    P.pub=res.pub;P.play=res.play;P.rd=res.rd||rd;P.via=res.via;P.a=res.a;
     P.sec=res.sec||1800;P.end=Date.now()+Math.max(0,(res.t0+P.sec*1000)-(res.now||res.t0));
     P.ans=P.pub.qs.map(function(){return null;});
-    FINLIVE[t]={pub:P.pub,play:P.play,rd:P.rd,end:P.end,sec:P.sec,ans:P.ans,via:P.via};finRun();
+    FINLIVE[t]={pub:P.pub,play:P.play,rd:P.rd,end:P.end,sec:P.sec,ans:P.ans,via:P.via,a:P.a};finRun();
   },function(){if(P===me)playFail(netFail());});}
 function finRun(){stopTimer();var me=P;
   timerH=setInterval(function(){if(P!==me||P.res){stopTimer();return;}var left=Math.max(0,P.end-Date.now()),bar=el('tbar'),c=el('tclock');
@@ -2434,22 +2432,26 @@ function finSubmit(force){if(!P||P.kind!=='final'||P.busy||P.res||!P.pub)return;
   Bank.finSubmit(P.t,P.play,ans,P.rd,P.via).then(function(res){if(P!==me)return;P.busy=false;
     if(!res.ok&&res.error==='done'&&res.n)res.ok=true;
     if(!res.ok){P.err=bankError(res);P.confirm=false;renderFinal();return;}
-    stopTimer();delete FINLIVE[P.t];P.res={right:res.right,n:res.n,score:res.score!=null?res.score:sc10(res.right,res.n),late:!!res.late};
+    stopTimer();delete FINLIVE[P.t];P.res={right:res.right,n:res.n,score:res.score!=null?res.score:sc10(res.right,res.n),late:!!res.late,a:res.a,prevBest:res.prevBest,best:res.best};
     if(!teacherAllowed())P.xp=finRecord(P.res);renderFinalResult();
   },function(){if(P!==me)return;P.busy=false;P.confirm=false;P.err=bankError(netFail());renderFinal();});}
-function finRecord(r){var t=P.t,rd=P.rd||finRound(t),old=(S.fin||{})[t],xp=0;S.fin=S.fin||{};
-  if(!(old&&old.done&&old.rd===rd&&finMine(t))){xp=FIN_XP*r.right;S.xp+=xp;}
-  S.fin[t]={rd:rd,right:r.right,n:r.n,score:r.score,late:!!r.late,t:Date.now(),done:true};
+function finRecord(r){var t=P.t,rd=P.rd||finRound(t),old=(S.fin||{})[t],same=!!(old&&old.done&&old.rd===rd),k=r.a||(same?(old.k||1):0)+1,xp=0;S.fin=S.fin||{};
+  var prev=r.prevBest!=null?r.prevBest:(old&&old.done?(old.bestAll!=null?old.bestAll:old.right):0);   // 4.9: XP only for the improvement over the best right-count so far (any opening)
+  xp=FIN_XP*Math.max(0,r.right-prev);S.xp+=xp;
+  var bs=r.best?{right:r.best.right,n:r.best.n,score:r.best.score,late:null}:(same&&old.right>=r.right?{right:old.right,n:old.n,score:old.score,late:old.late}:{right:r.right,n:r.n,score:r.score,late:!!r.late});
+  if(bs.late==null)bs.late=bs.right===r.right?!!r.late:!!(same&&old.late);
+  r.bestShown={right:bs.right,n:bs.n,score:bs.score};r.k=k;
+  S.fin[t]={rd:rd,right:bs.right,n:bs.n,score:bs.score,late:!!bs.late,k:k,lr:r.right,ln:r.n,ls:r.score,bestAll:Math.max(prev,r.right),t:Date.now(),done:true};
   S.hist.unshift({id:t,s:r.n?Math.round(100*r.right/r.n):0,st:0,t:Date.now()});if(S.hist.length>60)S.hist.length=60;persist();return xp;}
 function renderFinalResult(){var r=P.res,t=P.t,pass=r.score>=5,h='<div class="finres f1rise">';
-  if(t==='F1')h+='<div style="font-size:44px" aria-hidden="true">'+(pass?'🌤️🪷':'🌫️')+'</div><h1>'+(pass?L('Thăng tiên!','Ascended!'):L('Chưa thăng tiên','Not ascended yet'))+'</h1>';
-  else h+='<div style="font-size:44px" aria-hidden="true">'+(pass?'🔥⚒️':'🪵')+'</div><h1>'+(pass?L('Hoả chí luyện thành!','The fire holds!'):L('Lửa chưa đủ','The fire is not strong enough'))+'</h1>';
+  if(t==='F1')h+='<div style="font-size:44px" aria-hidden="true">'+(pass?'🌤️🪷':'🌫️')+'</div><h1>'+(pass?L('Vượt Vũ Môn!','Ascended!'):L('Chưa vượt Vũ Môn','Not ascended yet'))+'</h1>';
+  else h+='<div style="font-size:44px" aria-hidden="true">'+(pass?'🔥⚒️':'🪵')+'</div><h1>'+(pass?L('Hoá Rồng thành công!','The fire holds!'):L('Lửa chưa đủ','The fire is not strong enough'))+'</h1>';
   h+='<div class="eyebrow">'+esc(tx(FINT[t].name))+(teacherAllowed()?' · '+L('thử, không ghi điểm','trial, not recorded'):'')+'</div>';
   h+='<div class="kpis"><div class="kpi"><span>'+L('Đúng','Correct')+'</span><b>'+r.right+'/'+r.n+'</b></div><div class="kpi"><span>'+L('Điểm (thang 10)','Score (of 10)')+'</span><b>'+fmtScore(r.score)+'</b></div><div class="kpi"><span>XP</span><b>'+(P.xp?'+'+P.xp:'—')+'</b></div></div>';
+  if(r.bestShown)h+='<p class="small"><b>'+L('Điểm cao nhất: ','Best score: ')+fmtScore(r.bestShown.score)+'</b> ('+L('Đúng ','right ')+r.bestShown.right+'/'+r.bestShown.n+') · '+L('Lần làm: ','Tries: ')+r.k+'</p>';
   if(r.late)h+='<p class="small">'+L('Bài nộp sau giờ (mạng chậm); giáo viên sẽ thấy ghi chú này.','Handed in after the clock (slow network); your teacher sees this note.')+'</p>';
-  if(r.old)h+='<p class="small">'+L('Bạn đã nộp bài này trong lượt mở hiện tại.','You already handed this test in during the current opening.')+'</p>';
   el('play-body').innerHTML=h+'<p class="small" style="opacity:.8;margin-top:10px">'+L('Không hiển thị câu nào đúng hay sai.','No question is marked right or wrong.')+'</p></div>';playHud();
-  el('play-bar').innerHTML='<button class="btn" data-act="quit">'+L('Về con đường','Back to the road')+'</button>';}
+  el('play-bar').innerHTML='<button class="btn ghost" data-act="quit">'+L('Về con đường','Back to the road')+'</button>'+((teacherAllowed()||finRound(t))?'<button class="btn" data-act="finagain">'+(teacherAllowed()?L('Thử lại','Try again'):L('Làm lại (đề mới)','Retake (new paper)'))+'</button>':'');}
 
 /* ---------- teacher: the 🚪 Gates and 🎓 Finals tabs of the dashboard ---------- */
 function gateCycle(g){return g===''?'o':g==='o'?'c':'';}
@@ -2469,32 +2471,34 @@ function dashGatesHtml(){var g=gatesCfg(),lab={'':'·',o:'🔓',c:'🔒'},h='<p 
   h+='</div><div class="acts" style="flex-wrap:wrap"><button class="btn ghost" data-act="gall" data-g="o">🔓 '+L('Mở tất cả','Open all')+'</button><button class="btn ghost" data-act="gall" data-g="c">🔒 '+L('Đóng tất cả','Close all')+'</button><button class="btn ghost" data-act="gall" data-g="">· '+L('Tất cả theo tiến độ','All by progress')+'</button></div>';
   h+='<p class="eyebrow" style="margin:16px 0 4px">⛩️ '+L('Cổng Cuối Kỳ','The Final gate')+'</p>';
   ['F1','F2'].forEach(function(t){var on=!!finRound(t),n=finLast(t);h+='<label class="fintgl"><input type="checkbox" id="fin-'+t+'"'+(on?' checked':'')+'><div><b>'+esc(tx(FINT[t].name))+'</b><span class="small muted">'+(on?L('Đang mở · lượt ','Open · opening ')+n:L('Đang đóng','Closed')+(n?L(' · lượt gần nhất: ',' · last opening: ')+n:''))+'</span></div></label>';});
-  return h+'<p class="small muted">'+L('Mỗi lần bật = một lượt mới: mỗi học viên làm đúng một lần trong lượt đó. Tắt để khóa cổng; bài đang làm dở vẫn nộp được.','Each time you switch a test on starts a new opening: every student gets exactly one attempt in it. Switch off to lock the gate; papers in progress can still be handed in.')+'</p>';}
+  return h+'<p class="small muted">'+L('Mỗi lần bật = một lượt mới. Khi cổng mở, học viên làm lại bao nhiêu lần cũng được (mỗi lần một đề mới, đồng hồ riêng); điểm cao nhất trong lượt được ghi nhận. Tắt để khóa cổng; bài đang làm dở vẫn nộp được.','Each time you switch a test on starts a new opening. While it is on, students may retake as often as they like (a fresh paper and clock each time); the best score of the opening counts. Switch off to lock the gate; papers in progress can still be handed in.')+'</p>';}
 function finSrvLoad(){if(cloud.finBusy)return;var use=function(rows){cloud.finSrv=rows;cloud.finAt=Date.now();if(P&&P.kind==='dash'&&P.dtab==='fin')renderDash();};
   if(FAST){cloud.finBusy=true;fastCall('finAll',{}).then(function(res){cloud.finBusy=false;if(res.ok)use(res.rows||[]);else use(cloud.finals||null);},function(){cloud.finBusy=false;});}
   else if(SHEETS)use(cloud.finals||null);}
 function finTable(list){var by={};list.forEach(function(p){by[p.id]={};});
-  if(cloud.finSrv){cloud.finSrv.forEach(function(r){if(!by[r.u])return;var cur=by[r.u][r.test];if(!cur||r.rd>cur.rd)by[r.u][r.test]={rd:r.rd,right:r.r,n:r.n,score:r.n?sc10(r.r,r.n):null,late:!!r.late,done:!!r.t1};});}
+  if(cloud.finSrv){var g={};cloud.finSrv.forEach(function(r){if(!by[r.u])return;var q=r.u+'|'+r.test;(g[q]=g[q]||[]).push(r);});
+    Object.keys(g).forEach(function(q){var rs=g[q],u=rs[0].u,t=rs[0].test,rd=Math.max.apply(null,rs.map(function(r){return r.rd;})),cur=rs.filter(function(r){return r.rd===rd;}),dn=cur.filter(function(r){return r.t1;}),
+      a=function(r){return r.a||1;},bs=dn.slice().sort(function(x,y){return y.r-x.r||a(x)-a(y);})[0],ls=dn.slice().sort(function(x,y){return a(y)-a(x);})[0];
+      by[u][t]=bs?{rd:rd,right:bs.r,n:bs.n,score:bs.n?sc10(bs.r,bs.n):null,late:!!bs.late,done:true,k:dn.length,live:cur.length>dn.length,lr:ls.r,ln:ls.n,ls:ls.n?sc10(ls.r,ls.n):null}:{rd:rd,done:false,k:0,live:true};});}
   else list.forEach(function(p){['F1','F2'].forEach(function(t){var x=(p.fin||{})[t];if(x&&x.done)by[p.id][t]=x;});});
   return by;}
 function dashFinHtml(list,ps){var real=list.filter(function(p){return !p.test&&!p.waiting;}),tb=finTable(real),h='';
-  h+='<p class="small muted" style="margin:6px 0">'+(cloud.finSrv?L('Kết quả lấy từ máy chủ (bản ghi chính thức).','Results come from the server (the official record).'):L('Kết quả lưu trong tiến độ của học viên.','Results saved in each student\'s progress.'))+' '+L('Mỗi ô là lượt gần nhất của bài đó.','Each cell is that test\'s latest opening.')+'</p>';
+  h+='<p class="small muted" style="margin:6px 0">'+(cloud.finSrv?L('Kết quả lấy từ máy chủ (bản ghi chính thức).','Results come from the server (the official record).'):L('Kết quả lưu trong tiến độ của học viên.','Results saved in each student\'s progress.'))+' '+L('Mỗi ô: điểm cao nhất trong lượt mở gần nhất, số lần làm và điểm lần gần nhất.','Each cell: the best score of that test\'s latest opening, the number of tries and the latest score.')+'</p>';
   h+='<div class="kpis" style="grid-template-columns:repeat(2,1fr)">';['F1','F2'].forEach(function(t){var xs=real.map(function(p){return tb[p.id][t];}).filter(function(x){return x&&x.done&&x.rd===finLast(t);}),av=xs.length?xs.reduce(function(a,x){return a+(x.score||0);},0)/xs.length:0;
     h+='<div class="kpi"><span>'+FINT[t].short+' · '+L('lượt ','opening ')+(finLast(t)||'—')+'</span><b>'+xs.length+'/'+real.length+'</b><span class="small muted">'+L('đã nộp · TB ','handed in · avg ')+(xs.length?fmtScore(av):'—')+'</span></div>';});
-  h+='</div><div class="card" style="margin-top:12px;padding:12px"><div class="tbl-wrap"><table><thead><tr><th>'+L('Học viên','Student')+'</th><th>Thăng Tiên Trì</th><th>Hoả Chí</th></tr></thead><tbody>';
+  h+='</div><div class="card" style="margin-top:12px;padding:12px"><div class="tbl-wrap"><table><thead><tr><th>'+L('Học viên','Student')+'</th><th>Vượt Vũ Môn</th><th>Hoá Rồng</th></tr></thead><tbody>';
   real.forEach(function(p){h+='<tr><td>'+esc(pname(p,ps))+'</td>'+['F1','F2'].map(function(t){var x=tb[p.id][t];if(!x)return '<td class="muted">—</td>';
-    return '<td>'+(x.done?'<b>'+fmtScore(x.score)+'</b> <span class="small muted">'+x.right+'/'+x.n+' · L'+x.rd+(x.late?' · '+L('trễ','late'):'')+'</span>':'<span class="small muted">'+L('đang làm · L','in progress · O')+x.rd+'</span>')+
-      (x.rd===finLast(t)?' <button class="btn ghost" style="padding:2px 6px;font-size:12px" data-act="finredo" data-id="'+esc(p.id)+'" data-t="'+t+'" data-rd="'+x.rd+'">'+(P.confirm==='fr'+p.id+t?L('Chắc chắn?','Sure?'):L('Cho làm lại','Allow retake'))+'</button>':'')+'</td>';}).join('')+'</tr>';});
+    return '<td>'+(x.done?'<b>'+fmtScore(x.score)+'</b> <span class="small muted">'+x.right+'/'+x.n+' · L'+x.rd+' · '+L('lần ','tries ')+(x.k||1)+((x.k||1)>1&&x.ls!=null?' · '+L('gần nhất ','latest ')+fmtScore(x.ls)+' ('+x.lr+'/'+x.ln+')':'')+(x.late?' · '+L('trễ','late'):'')+(x.live?' · '+L('đang làm','in progress'):'')+'</span>':'<span class="small muted">'+L('đang làm · L','in progress · O')+x.rd+'</span>')+'</td>';}).join('')+'</tr>';});
   return h+'</tbody></table></div></div>';}
-function finRedo(id,t,rd){var done=function(){toast(L('Học viên này được làm lại trong lượt hiện tại.','This student may take the test again in this opening.'));cloud.finSrv=null;finSrvLoad();if(SHEETS)sheetsDash();};
-  if(FAST)return fastCall('finReset',{id:id,test:t,rd:rd}).then(function(res){if(res.ok)done();else if(res.error==='no_db')api('finReset',{id:id,test:t,rd:rd}).then(done);});
-  if(SHEETS)return api('finReset',{id:id,test:t,rd:rd}).then(done);
-  var r=Object.assign({},(cloud.cfg&&cloud.cfg.finRetake)||{});r[id+'|'+t]=Date.now();return writeConfig({finRetake:r}).then(done);}
 function exportFin(){var list=cloud.players.filter(function(p){return !p.teacher&&!p.test&&!p.waiting;}),ids=list.map(function(p){return p.id;}),tb=finTable(list);
-  names(ids,function(ps){var rows=[csvLine(['student','F1_opening','F1_right','F1_n','F1_score10','F1_late','F2_opening','F2_right','F2_n','F2_score10','F2_late'])];
-    list.forEach(function(p){var r=[pname(p,ps)];['F1','F2'].forEach(function(t){var x=tb[p.id][t];r.push(x?x.rd:'',x&&x.done?x.right:'',x&&x.done?x.n:'',x&&x.done?x.score:'',x&&x.late?'1':'');});rows.push(csvLine(r));});
-    rows.push(csvLine(['F1 = Final Test 1 Thăng Tiên Trì (20 câu trắc nghiệm); F2 = Final Test 2 Hoả Chí (4 kết quả số, đúng trong ±1%); điểm thang 10; xuất '+new Date().toLocaleString('vi-VN')]));
-    saveFile('economics-arena-final.csv','﻿'+rows.join('\n'));});}
+  names(ids,function(ps){var rows=[csvLine(['student','test','opening','attempt','right','n','score10','late','started','submitted','best_in_opening'])],nm={};list.forEach(function(p){nm[p.id]=pname(p,ps);});
+    var tm=function(x){return x?new Date(x).toLocaleString('vi-VN'):'';};
+    if(cloud.finSrv){var bs={};   // one row per attempt
+      cloud.finSrv.forEach(function(r){if(r.t1&&nm[r.u]!==undefined){var q=r.u+'|'+r.test+'|'+r.rd,a=r.a||1,b=bs[q];if(!b||r.r>b.r||(r.r===b.r&&a<b.a))bs[q]={r:r.r,a:a};}});
+      cloud.finSrv.filter(function(r){return nm[r.u]!==undefined;}).sort(function(x,y){return x.t0-y.t0;}).forEach(function(r){var a=r.a||1,b=bs[r.u+'|'+r.test+'|'+r.rd];rows.push(csvLine([nm[r.u],r.test,r.rd,a,r.t1?r.r:'',r.t1?r.n:'',r.t1&&r.n?sc10(r.r,r.n):'',r.late?'1':'',tm(r.t0),tm(r.t1),b&&b.a===a?'1':'']));});}
+    else list.forEach(function(p){['F1','F2'].forEach(function(t){var x=tb[p.id][t];if(x&&x.done)rows.push(csvLine([nm[p.id],t,x.rd,'best of '+(x.k||1),x.right,x.n,x.score,x.late?'1':'','','','1']));});});
+    rows.push(csvLine(['F1 = Final Test 1 Vượt Vũ Môn (20 câu trắc nghiệm); F2 = Final Test 2 Hoá Rồng (4 kết quả số, đúng trong ±1%); điểm thang 10; mỗi dòng là một lần làm, best_in_opening = 1 là lần được tính; xuất '+new Date().toLocaleString('vi-VN')]));
+    saveFile('economics-arena-final.csv','\ufeff'+rows.join('\n'));});}
 
 function playNode(){playAt(NODES[S.pos]);}
 document.addEventListener('click',function(e){
@@ -2524,7 +2528,7 @@ document.addEventListener('click',function(e){
    case 'grow':if(teacherAllowed())gateRow(+a.dataset.w);break;
    case 'gall':if(teacherAllowed())gateAll(a.dataset.g);break;
    case 'fincsv':if(teacherAllowed())exportFin();break;
-   case 'finredo':if(teacherAllowed()){var fk='fr'+a.dataset.id+a.dataset.t;if(P.confirm===fk){P.confirm=null;finRedo(a.dataset.id,a.dataset.t,+a.dataset.rd);}else{P.confirm=fk;renderDash();}}break;
+   case 'finagain':if(P&&P.kind==='final'&&P.res)startFinal(P.t);break;
    case 'walk':walk();break;
    case 'shop':shopMsg='';renderShop();openSheet('shop');break;
    case 'menu':renderMenu();openSheet('menu');break;
