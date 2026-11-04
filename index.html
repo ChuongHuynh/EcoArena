@@ -9,7 +9,7 @@
 <script>window.ARENA_RELEASE=true;</script>
 <style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head><body>
-<title>Economics Arena 4.9</title>
+<title>Economics Arena 4.99</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -254,6 +254,9 @@ body.cursed .map::after{content:"";position:absolute;inset:0;pointer-events:none
 .note{font-size:14px;background:var(--bg);border-radius:8px;padding:6px 8px;margin:4px 0} .tmrow{cursor:pointer} .tmrow input{width:18px;height:18px;vertical-align:-3px;accent-color:var(--teal)}
 .dbsol{background:var(--gold-soft);border:1.5px solid var(--gold);border-radius:10px;padding:8px 10px;margin:4px 0 8px;font-size:14px} .dbsol ul{margin:6px 0 0;padding-left:18px}
 
+/* ===== Version 4.99 ===== */
+.wlist{display:grid;gap:0;margin:6px 0 10px} .wrow{border-top:1px solid var(--line);padding:10px 0;display:grid;gap:5px;overflow-wrap:anywhere} .wrow:first-child{border-top:0}
+.wchk{display:flex;gap:10px;align-items:flex-start;cursor:pointer} .wchk input{width:22px;height:22px;flex:none;margin-top:1px;accent-color:var(--good)} .wctx{white-space:pre-wrap;padding:4px 0}
 /* ===== Version 4.3 ===== */
 .achtitle{background:linear-gradient(90deg,rgba(123,94,167,.16),transparent);border-left:4px solid #7b5ea7;border-radius:8px;padding:8px 10px;margin:4px 0 10px;font-size:14px}
 .clok{color:var(--good)} .clno{color:var(--bad)} .clna{color:var(--muted)} td.clok,td.clno,td.clna{font-weight:600}
@@ -472,12 +475,25 @@ function npcCap(T){return has('scooter')?Math.round(T.cap*1.5):T.cap;}
 
 /* ================= STATE ================= */
 var KEY='arena-v1',SEATS=20,S;
-function fresh(){return {pos:0,best:{},xp:0,cap:500,inv:{hint:0,retry:0,again:0},owned:[],review:[],seen:[],npcs:[],nid:1,teacher:false,att:{},hist:[],updated:0,hide:false,epoch:0,resetSeen:0,badges:[],evDone:{},mg:{},mgPrize:{},trial:{},titles:[],curse:null,clo:{},fin:{}};}
+function fresh(){return {pos:0,best:{},xp:0,cap:500,inv:{hint:0,retry:0,again:0},owned:[],review:[],seen:[],npcs:[],nid:1,teacher:false,att:{},hist:[],updated:0,hide:false,epoch:0,resetSeen:0,badges:[],evDone:{},mg:{},mgPrize:{},trial:{},titles:[],curse:null,clo:{},fin:{},wrong:[]};}
 function normalize(x){var f=fresh();if(!x||typeof x!=='object'||typeof x.pos!=='number'||x.pos>=N||x.pos<0)return f;
   Object.keys(f).forEach(function(k){if(x[k]===undefined||x[k]===null)x[k]=f[k];});if(!x.inv.hint)x.inv.hint=x.inv.hint||0;if(!x.inv.retry)x.inv.retry=x.inv.retry||0;if(!x.inv.again)x.inv.again=0;return x;}
 try{S=normalize(JSON.parse(localStorage.getItem(KEY)||'null'));}catch(e){S=fresh();}
 function localSave(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 function persist(){S.updated=Date.now();localSave();cloudSoon();}
+/* ===== Version 4.99: the list of questions I got wrong (S.wrong) — question text only, never the answer, the options or my choice ===== */
+function wrongNorm(x,c){return (String(x||'')+'|'+String(c||'')).toLowerCase().replace(/\s+/g,' ').trim();}
+function wrongAdd(items){S.wrong=S.wrong||[];var now=Date.now();
+  (items||[]).slice().reverse().forEach(function(it){var x=String(it.x||'').slice(0,400),c=String(it.c||'').slice(0,600);if(!x)return;var key=wrongNorm(x,c),j=-1,e;
+    S.wrong.forEach(function(w,i){if(j<0&&wrongNorm(w.x,w.c)===key)j=i;});
+    if(j>=0){e=S.wrong.splice(j,1)[0];e.k=(e.k||1)+1;e.t=now;if(it.s)e.s=it.s;}else e={x:x,c:c,s:String(it.s||''),k:1,t:now};
+    S.wrong.unshift(e);});
+  if(S.wrong.length>150)S.wrong.length=150;persist();}
+if(window.__ARENA_TEST)window.__ARENA_TEST.wrongAdd=function(x){wrongAdd(x);};   // tests re-add a question without having to meet the same random one again
+function wrongItems(w,pubs,src,ctx){var out=[];if(!Array.isArray(w)||!pubs)return out;     // w = [[i,j],…] from the server; none → nothing is guessed
+  w.forEach(function(p){var q=pubs[p[0]];if(!q)return;if(q.items){var it=q.items[p[1]];if(it)out.push({x:it.stem,c:'',s:src});}else if(q.q)out.push({x:q.q,c:ctx||'',s:src});});return out;}
+function wrongCase(w,pub,src){var out=[];if(!Array.isArray(w)||!pub||!pub.parts)return out;var c=(pub.title?pub.title+': ':'')+(pub.story||'');
+  w.forEach(function(i){var q=pub.parts[i];if(q&&q.q)out.push({x:q.q,c:c,s:src});});return out;}
 // attempt log: every finished play of a landmark, replays included (best never goes down)
 function logAttempt(id,score,stars){var a=S.att[id]||{n:0,best:0,last:0,stars:0};a.n++;a.last=score;a.best=Math.max(a.best,score);a.stars=Math.max(a.stars,stars);S.att[id]=a;
   S.hist.unshift({id:id,s:score,st:stars,t:Date.now()});if(S.hist.length>60)S.hist.length=60;}
@@ -734,7 +750,7 @@ var Bank=(function(){
           if(k.team){var ro=k.parts[i].role;if(ro==='team'?k.team.lead!==cloud.uid:(k.team.roles[ro]||[]).indexOf(cloud.uid)<0)return;}
           k.used.push(i);var rt=!!CaseCore.grade(k,i,ans[x]).right,b=k.parts[i].role==='team'?team:own;b.n++;if(rt)b.r++;pr[i]=rt?1:0;if(CaseCore.tally)t=t.concat(CaseCore.tally(k,i,rt)||[]);});
         if(!Object.keys(pr).length)return done({error:'done'});
-        return done({right:own.r+team.r,n:own.n+team.n,own:own,team:team,pr:pr,t:t.reduce(function(m,x){var o=m.filter(function(y){return y[0]===x[0];})[0];if(o){o[1]+=x[1];o[2]+=x[2];}else m.push(x.slice());return m;},[])});},
+        return done({right:own.r+team.r,n:own.n+team.n,own:own,team:team,pr:pr,w:Object.keys(pr).filter(function(i){return !pr[i];}).map(Number),t:t.reduce(function(m,x){var o=m.filter(function(y){return y[0]===x[0];})[0];if(o){o[1]+=x[1];o[2]+=x[2];}else m.push(x.slice());return m;},[])});},
 
       caseSol:function(share,cid){if(!window.CaseCore)return done({error:'no_cases'});var s=CaseCore.make(cid,share);return done({cid:cid,title:s.pub.title,story:s.pub.story,parts:s.pub.parts.map(function(q){return q.q;}),sol:CaseCore.solution(cid,share)});},
       npcHint:function(play){return done(keys[play]?BankCore.hint(keys[play],1):{error:'expired'});},
@@ -1074,7 +1090,7 @@ function hud(){
   document.documentElement.lang=lang;
   document.querySelectorAll('[data-lang]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.lang===lang?'true':'false');});
   var w=WORLDS[worldNow()],r=rankIndex();
-  el('crumb').textContent=L('Vi mô · Phiên bản 4.9','Micro · Version 4.9')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
+  el('crumb').textContent=L('Vi mô · Phiên bản 4.99','Micro · Version 4.99')+(S.teacher?L(' · Chế độ giáo viên',' · Teacher mode'):'');
   el('rank').textContent=(r<0?L('Khởi nghiệp','Starting out'):tx(WORLDS[r].rank))+(topTitle()?' · ⚡'+titleName(topTitle()):'');
   document.body.classList.toggle('cursed',!!S.curse);achCheck();
   el('xp').textContent=S.xp+' XP';el('cap').textContent=L('Vốn ','Capital ')+fmt(S.cap)+'k';
@@ -1090,7 +1106,7 @@ function panel(){
   if(nodeClosed(nd))h+='<button class="btn" disabled>🔒 '+L('Đang đóng','Closed')+'</button>';
   else h+='<button class="btn" data-act="play">'+(done?L('Chơi lại','Replay'):L('Chơi','Play'))+'</button>';
   if(done&&S.pos<N-1)h+='<button class="btn" data-act="walk">'+L('Đi tiếp','Walk on')+'</button>';
-  h+='<button class="btn ghost" data-act="final" aria-label="'+L('Cổng Cuối Kỳ','The Final gate')+'">⛩️'+(anyOpenFinal()?'<span class="small"> '+L('mở','open')+'</span>':'')+'</button><button class="btn ghost" data-act="shop">'+L('Cửa hàng','Shop')+'</button><button class="btn ghost" data-act="arena" aria-label="'+L('Bản đồ thị trường TP.HCM','HCMC market map')+'">⚔️</button>'+(anyTrial()?'<button class="btn ghost" data-act="trials" aria-label="'+L('Vùng Ma Luyện','Ma Luyện realms')+'">🌀</button>':'')+(boardOpen()?'<button class="btn ghost" data-act="board" aria-label="'+L('Bảng xếp hạng lớp','Class leaderboard')+'">🏆</button>':'')+(teacherAllowed()?'<button class="btn ghost" data-act="dash" aria-label="'+L('Bảng điều khiển lớp','Class dashboard')+'">📊</button>':'')+'<button class="btn ghost" data-act="ach" aria-label="'+L('Thành tích','Achievements')+'">🏅</button><button class="btn ghost" data-act="clo" aria-label="'+L('Chuẩn đầu ra','Learning outcomes')+'">📈</button><button class="btn ghost" data-act="menu" aria-label="'+L('Cài đặt','Settings')+'">⋯</button></div>';
+  h+='<button class="btn ghost" data-act="final" aria-label="'+L('Cổng Cuối Kỳ','The Final gate')+'">⛩️'+(anyOpenFinal()?'<span class="small"> '+L('mở','open')+'</span>':'')+'</button><button class="btn ghost" data-act="shop">'+L('Cửa hàng','Shop')+'</button><button class="btn ghost" data-act="arena" aria-label="'+L('Bản đồ thị trường TP.HCM','HCMC market map')+'">⚔️</button>'+(anyTrial()?'<button class="btn ghost" data-act="trials" aria-label="'+L('Vùng Ma Luyện','Ma Luyện realms')+'">🌀</button>':'')+(boardOpen()?'<button class="btn ghost" data-act="board" aria-label="'+L('Bảng xếp hạng lớp','Class leaderboard')+'">🏆</button>':'')+(teacherAllowed()?'<button class="btn ghost" data-act="dash" aria-label="'+L('Bảng điều khiển lớp','Class dashboard')+'">📊</button>':'')+'<button class="btn ghost" data-act="ach" aria-label="'+L('Thành tích','Achievements')+'">🏅</button><button class="btn ghost" data-act="clo" aria-label="'+L('Chuẩn đầu ra','Learning outcomes')+'">📈</button><button class="btn ghost" data-act="wrong" aria-label="'+L('Câu đã sai','Questions I got wrong')+'">📕'+((S.wrong||[]).length?'<span class="small"> '+S.wrong.length+'</span>':'')+'</button><button class="btn ghost" data-act="menu" aria-label="'+L('Cài đặt','Settings')+'">⋯</button></div>';
   if(nodeClosed(nd))h+='<p class="lockline">'+L('Giáo viên đang đóng mốc này. Chờ giáo viên mở lại nhé.','Your teacher has closed this stop for now.')+'</p>';
   var og=openGateList().slice(0,8);if(og.length&&!teacherMode())h+='<div class="gopen"><span class="small muted" style="align-self:center">🔓 '+L('Giáo viên mở:','Opened by your teacher:')+'</span>'+og.map(function(x){return '<button class="btn ghost" data-act="gplay" data-i="'+x.i+'">'+x.nd.id+'</button>';}).join('')+'</div>';
   if(done&&S.pos===N-1)h+='<p class="muted small" style="margin:8px 0 0">'+L('Bạn đã đi hết con đường Vi mô!','You have walked the whole Micro road!')+'</p>';
@@ -1149,7 +1165,7 @@ function npcAnswer(i){
     npcEnd(res.right);
   },function(){if(talk!==me)return;talk.busy=false;talk.pick=null;talk.err=bankError(netFail());renderTalk();});
 }
-function npcEnd(right){var q=talk.q,T=NPC[talk.npc.type];talk.done=true;talk.ok=right;talk.again=false;
+function npcEnd(right){var q=talk.q,T=NPC[talk.npc.type];talk.done=true;talk.ok=right;talk.again=false;if(!right&&q.q)wrongAdd([{x:q.q,c:'',s:'NPC'}]);
   if(S.seen.indexOf(q.qid)<0)S.seen.push(q.qid);if(S.seen.length>400)S.seen=S.seen.slice(-400);
   if(right){S.cap+=npcCap(T);S.xp+=T.xp;S.review=S.review.filter(function(x){return x!==q.qid;});}else if(S.review.indexOf(q.qid)<0)S.review.push(q.qid);
   S.npcs=S.npcs.filter(function(x){return x.id!==talk.npc.id;});persist();renderTalk();hud();draw();}
@@ -1280,6 +1296,7 @@ function stageSubmit(){
     stageResult(res);},function(){if(P!==me)return;P.busy=false;P.confirm=false;P.err=bankError(netFail());renderStage();});
 }
 function stageResult(res){
+  wrongAdd(wrongItems(res.w,P.tasks,L('Chặng ','Stage ')+P.node.id));
   var hc=5*P.hinted.filter(Boolean).length,avg=Math.round(100*res.right/Math.max(1,res.n)),st=starsPct(avg),bonus=st>=1?20:0;
   P.xp=Math.max(0,res.right*15-hc)+bonus;var raw=P.xp;P.xp=xpBoost(P.xp);P.boost=P.xp-raw;S.xp+=P.xp;
   P.res={avg:avg,st:st,right:res.right,n:res.n,hc:hc,bonus:bonus,react:reactFor(P.node.id,st>=1),first:award(P.node,st,50,avg)};renderStageResult();
@@ -1327,7 +1344,7 @@ function bossSubmit(force){
   P.busy=true;P.err='';renderBoss();var me=P;
   Bank.submit(P.play,qsAns(P.ans),'single').then(function(res){if(P!==me)return;P.busy=false;
     if(!res.ok){P.err=bankError(res);P.confirm=false;renderBoss();return;}
-    stopTimer();P.right=res.right;P.wrong=res.n-res.right;P.xp=P.right*BAL.bossRight-P.wrong*BAL.bossWrong;bossResult();
+    stopTimer();wrongAdd(wrongItems(res.w,P.qs,L('Trùm C','Boss C')+parseInt(P.node.id,10)));P.right=res.right;P.wrong=res.n-res.right;P.xp=P.right*BAL.bossRight-P.wrong*BAL.bossWrong;bossResult();
   },function(){if(P!==me)return;P.busy=false;P.confirm=false;P.err=bankError(netFail());renderBoss();});
 }
 function bossResult(){
@@ -1602,7 +1619,7 @@ function arDuelGo(i){var D=AR.duel;if(!D||!D.qs||D.done||D.busy||i<0||i>=D.qs.le
 function arDuelSubmit(force){var D=AR.duel;if(!D||!D.qs||D.done||D.busy)return;if(qsLeft(D.ans)&&!D.confirm&&!force){D.confirm=true;renderArena();return;}
   D.busy=true;D.err='';renderArena();
   Bank.submit(D.play,qsAns(D.ans),'single').then(function(res){if(AR.duel!==D)return;D.busy=false;if(!res.ok){D.err=bankError(res);D.confirm=false;renderArena();return;}
-    D.right=res.right;D.pts=12*res.right+Math.round(8*res.right*Math.max(0,D.left)/D.total);arDuelFinish();},
+    wrongAdd(wrongItems(res.w,D.qs,L('Thách đấu','Quiz duel')));D.right=res.right;D.pts=12*res.right+Math.round(8*res.right*Math.max(0,D.left)/D.total);arDuelFinish();},
     function(){if(AR.duel===D){D.busy=false;D.confirm=false;D.err=bankError(netFail());renderArena();}});
 }
 function arDuelFinish(){var D=AR.duel;if(!D||D.done||!D.qs)return;clearInterval(AR.dt);
@@ -1890,7 +1907,7 @@ function trialSubmit(force){if(!P||P.kind!=='trial'||P.busy||P.res||!P.qs)return
   P.busy=true;P.err='';renderTrial();var me=P;
   Bank.submit(P.play,qsAns(P.ans),'single').then(function(res){if(P!==me)return;P.busy=false;
     if(!res.ok){P.err=bankError(res);P.confirm=false;renderTrial();return;}
-    stopTimer();P.right=res.right;var won=res.right===res.n;if(won)P.xp=BAL.trialQXP*res.n;trialEnd(won);
+    stopTimer();wrongAdd(wrongItems(res.w,P.qs,L('Ma Luyện C','Ma Luyện C')+P.ch));P.right=res.right;var won=res.right===res.n;if(won)P.xp=BAL.trialQXP*res.n;trialEnd(won);
   },function(){if(P!==me)return;P.busy=false;P.confirm=false;P.err=bankError(netFail());renderTrial();});}
 function trialEnd(won){stopTimer();var ch=P.ch;
   if(won){S.trial[ch]='pass';if(S.titles.indexOf(ch)<0)S.titles.push(ch);P.xp+=BAL.trialPassXP;}
@@ -2068,7 +2085,7 @@ function chSubmit(force){var g=AR.cg;if(!g||g.done||g.busy||!g.pub)return;var a=
   if(!k){g.right=0;chFinish();return;}
   g.busy=true;g.err='';renderArena();
   Bank.caseSubmit(g.play,a).then(function(res){if(AR.cg!==g)return;g.busy=false;if(!res.ok){if(res.error==='done'){g.right=0;chFinish();return;}g.err=bankError(res);g.confirm=false;renderArena();return;}
-    g.right=res.right;g.pr=res.pr||null;chFinish();},function(){if(AR.cg===g){g.busy=false;g.confirm=false;g.err=bankError(netFail());renderArena();}});}
+    wrongAdd(wrongCase(res.w,g.pub,L('Đấu trí','Challenge')));g.right=res.right;g.pr=res.pr||null;chFinish();},function(){if(AR.cg===g){g.busy=false;g.confirm=false;g.err=bankError(netFail());renderArena();}});}
 function chFinish(){var g=AR.cg;if(!g||g.done||!g.pub)return;var n=g.pub.parts.length,r=g.right||0;
   g.done=true;g.pct=Math.round(100*r/n);g.right=r;g.ms=Math.min(g.lim||CH_GAME,Date.now()-g.t0);var m=chMy();
   m.res=(m.res||[]).concat([{id:g.id,opp:g.opp,pct:g.pct,ms:g.ms,t:Date.now(),cid:g.cid,sh:g.share,pr:g.pr||undefined}]).slice(-20);m.play=null;chSend();chScan();renderArena();}
@@ -2175,7 +2192,7 @@ function tmSubmit(force){var g=AR.tm;if(!g||g.done||g.busy||g.sub||!g.play||!g.p
   var fin=function(res){g.sub={own:res.own||{r:0,n:0},team:res.team||{r:0,n:0}};var m=chMy();m.tres={id:g.id,own:g.sub.own,team:g.sub.team,cid:g.cid,sh:g.share,pr:res.pr||undefined};chSend();tmCheckEnd();renderArena();};
   if(!k){fin({});return;}
   g.busy=true;g.err='';renderArena();
-  Bank.caseSubmit(g.play,a).then(function(res){if(AR.tm!==g)return;g.busy=false;if(!res.ok&&res.error!=='done'){g.err=res.error==='not_yours'?L('Phần này không thuộc vai của bạn.','This part is not your role\'s.'):bankError(res);g.confirm=false;renderArena();return;}fin(res.ok?res:{});},
+  Bank.caseSubmit(g.play,a).then(function(res){if(AR.tm!==g)return;g.busy=false;if(!res.ok&&res.error!=='done'){g.err=res.error==='not_yours'?L('Phần này không thuộc vai của bạn.','This part is not your role\'s.'):bankError(res);g.confirm=false;renderArena();return;}if(res.ok)wrongAdd(wrongCase(res.w,g.pub,L('Hợp tác','Team')));fin(res.ok?res:{});},
     function(){if(AR.tm===g){g.busy=false;g.confirm=false;g.err=bankError(netFail());renderArena();}});}
 function tmNote(){var g=AR.tm,e=el('tmnote');if(!g||!e)return;var m=chMy();m.note={id:g.id,txt:String(e.value).slice(0,200)};g.myNote=m.note.txt;chSend();toast(L('Đã gửi ghi chú cho đội.','Note sent to your team.'));renderArena();}
 function tmCheckEnd(force){var g=AR.tm;if(!g||g.done||!g.pub||g.lead!==cloud.uid)return;var subs=tmSubs(),all=Object.keys(subs).length>=g.members.length,late=g.t0&&Date.now()-g.t0>=g.lim+6000;
@@ -2272,6 +2289,14 @@ function achTier(a){var v=a.v(),t=0;a.t.forEach(function(x,i){if(v>=x)t=i+1;});r
 function achCheck(){var first=!S.achSeen;S.achSeen=S.achSeen||{};var news=[];
   ACH.forEach(function(a){var r=achTier(a);if(r.t>(S.achSeen[a.k]||0)){if(!first)news.push(a.ic+' '+tx(a.n)+' · '+tx(TIER[r.t-1]));S.achSeen[a.k]=r.t;}});
   if(first||news.length){localSave();if(news.length)setTimeout(function(){toast('🏅 '+L('Thành tích mới: ','New achievement: ')+news.join(', '));},700);}}
+function renderWrong(){var W=S.wrong||[],h='<div class="who"><div class="face" aria-hidden="true">📕</div><div><b>'+L('Câu bạn đã làm sai','Questions you got wrong')+'</b><span class="muted small">'+W.length+'</span></div></div>'+
+  '<p class="small muted">'+L('Chỉ hiện đề câu hỏi — không có đáp án và không có lựa chọn của bạn. Ôn xong, đánh dấu ✓ để bỏ câu khỏi danh sách. Nếu làm sai lại, câu sẽ quay lại.','Only the question is shown — no answer and not your choice. When you have reviewed one, tick ✓ to drop it. Get it wrong again and it comes back.')+'</p>';
+  if(!W.length)h+='<p class="center">'+L('Chưa có câu sai nào. 🎉','No wrong questions yet. 🎉')+'</p>';
+  else{h+='<div class="wlist">';W.forEach(function(e,i){var d=new Date(e.t||0),dd=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
+    h+='<div class="wrow"><label class="wchk"><input type="checkbox" data-act="wdrop" data-i="'+i+'" aria-label="'+L('Bỏ khỏi danh sách','Drop from the list')+'"><span>'+esc(e.x)+'</span></label>'+
+      (e.c?'<details><summary class="small">'+L('Đề bài','Context')+'</summary><div class="small muted wctx">'+esc(e.c)+'</div></details>':'')+
+      '<div class="small muted">'+esc(e.s||'')+' · '+dd+((e.k||1)>1?' · ×'+e.k:'')+'</div></div>';});h+='</div>';}
+  h+='<div class="acts"><button class="btn" data-act="closesheet">'+L('Đóng','Close')+'</button></div>';el('sheet').innerHTML=h;}
 function renderAch(){var h='<div class="who"><div class="face" aria-hidden="true">🏅</div><div><b>'+L('Thành tích','Achievements')+'</b><span class="muted small">'+L('Danh hiệu và huy hiệu ba hạng: Đồng · Bạc · Vàng.','Titles and badges in three tiers: Bronze · Silver · Gold.')+'</span></div></div>';
   var tt=topTitle();h+='<div class="achtitle">'+(tt?'⚡ <b>'+titleName(tt)+'</b> · '+S.titles.slice().sort().map(function(c){return ROMAN[c-1];}).join(' '):L('Chưa có danh hiệu. Thắng Trùm rồi vào 🌀 Vùng Ma Luyện để giành Nghịch Thiên.','No title yet. Beat a boss, then enter the 🌀 Ma Luyện realm to earn Nghịch Thiên.'))+'</div><div class="achgrid">';
   ACH.forEach(function(a){var r=achTier(a),next=a.t[r.t],pct=next?Math.min(100,Math.round(100*r.v/next)):100;
@@ -2432,6 +2457,7 @@ function finSubmit(force){if(!P||P.kind!=='final'||P.busy||P.res||!P.pub)return;
   Bank.finSubmit(P.t,P.play,ans,P.rd,P.via).then(function(res){if(P!==me)return;P.busy=false;
     if(!res.ok&&res.error==='done'&&res.n)res.ok=true;
     if(!res.ok){P.err=bankError(res);P.confirm=false;renderFinal();return;}
+    wrongAdd(wrongItems(res.w,P.pub.qs,P.t==='F1'?'Vượt Vũ Môn':'Hoá Rồng',P.t==='F2'&&P.pub.ex?(P.pub.ex.title||'')+': '+(P.pub.ex.story||''):''));
     stopTimer();delete FINLIVE[P.t];P.res={right:res.right,n:res.n,score:res.score!=null?res.score:sc10(res.right,res.n),late:!!res.late,a:res.a,prevBest:res.prevBest,best:res.best};
     if(!teacherAllowed())P.xp=finRecord(P.res);renderFinalResult();
   },function(){if(P!==me)return;P.busy=false;P.confirm=false;P.err=bankError(netFail());renderFinal();});}
@@ -2504,7 +2530,7 @@ function playNode(){playAt(NODES[S.pos]);}
 document.addEventListener('click',function(e){
   var lb=e.target.closest('[data-lang]');
   if(lb){lang=lb.dataset.lang;try{localStorage.setItem('arena-lang',lang);}catch(_){}renderMap();
-    if(sheetMode==='final')renderFinalSheet();else if(sheetMode==='ach')renderAch();else if(sheetMode==='clo')renderClo();else if(sheetMode==='trials')renderTrials();else if(sheetMode==='talk')renderTalk();else if(sheetMode==='shop')renderShop();else if(sheetMode==='menu')renderMenu();else if(sheetMode==='board')renderBoard();
+    if(sheetMode==='final')renderFinalSheet();else if(sheetMode==='ach')renderAch();else if(sheetMode==='clo')renderClo();else if(sheetMode==='wrong')renderWrong();else if(sheetMode==='trials')renderTrials();else if(sheetMode==='talk')renderTalk();else if(sheetMode==='shop')renderShop();else if(sheetMode==='menu')renderMenu();else if(sheetMode==='board')renderBoard();
     if(P){if(P.kind==='stage')(P.res?renderStageResult:renderStage)();else if(P.kind==='boss')(P.res?renderBossResult:renderBoss)();else if(P.kind==='decide')renderDecide();else if(P.kind==='rounds')renderRounds();else if(P.kind==='bossintro')bossIntro(P.node);else if(P.kind==='trial')(P.res?renderTrialResult:renderTrial)();else if(P.kind==='mini')renderMini();else if(P.kind==='dash')renderDash();else if(P.kind==='arena')renderArena();else if(P.kind==='final'){if(P.res)renderFinalResult();else if(P.pub)renderFinal();}}
     return;}
   var hx=e.target.closest('[data-hex]');if(hx&&P&&P.kind==='arena'){AR.sel=AR.sel===hx.dataset.hex&&!hx.classList.contains('mini')?null:hx.dataset.hex;AR.tab='map';renderArena();return;}
@@ -2600,6 +2626,8 @@ document.addEventListener('click',function(e){
    case 'trials':renderTrials();openSheet('trials');break;
    case 'ach':renderAch();openSheet('ach');break;
    case 'clo':renderClo();openSheet('clo');break;
+   case 'wrong':renderWrong();openSheet('wrong');break;
+   case 'wdrop':if(S.wrong&&S.wrong[+a.dataset.i]){S.wrong.splice(+a.dataset.i,1);persist();renderWrong();if(typeof panel==='function')panel();toast(L('Đã bỏ khỏi danh sách.','Dropped from the list.'));}break;
    case 'dtab':if(P&&P.kind==='dash'){P.dtab=a.dataset.t;if(P.dtab==='clo')cloSrvLoad();if(P.dtab==='fin'){cloud.finSrv=null;if(SHEETS)sheetsDash().then(finSrvLoad,finSrvLoad);else finSrvLoad();}renderDash();}break;
    case 'clocsv':if(teacherAllowed())exportClo();break;
    case 'trialgo':startTrial(+a.dataset.c);break;
